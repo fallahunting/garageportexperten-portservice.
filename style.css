@@ -33,3 +33,8 @@ input,select,textarea{font-size:16px}
  .gpe-top-title{font-size:14px}
 }
 @media(max-width:420px){.gpe-top-title{font-size:12px}}
+
+/* Full-width hero logo is the FIRST content on startsidan, before menu and montör. */
+.gpe-top-brand{background:#ffeb41;padding:10px 20px;display:flex;justify-content:center;align-items:center}
+.gpe-top-brand img{display:block;width:min(100%,960px);height:auto;max-height:260px;object-fit:contain}
+@media(max-width:770px){.gpe-top-brand{padding:8px 12px}.gpe-top-brand img{max-height:200px}}
