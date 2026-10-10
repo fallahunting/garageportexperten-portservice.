@@ -237,7 +237,7 @@ function serviceTemplateOptions(selected){
   '<optgroup label="'+esc(heading)+'">'+options.filter(([id])=>known.has(id)).map(([id,label])=>
    '<option value="'+esc(id)+'" '+(id===selected?'selected':'')+'>'+esc(label)+'</option>').join('')+'</optgroup>').join('');
 }
-function equipmentForm(e){let cid=e?.customer_id||sys.selectedCustomer||table('customers')[0]?.id;return `<h2>${e?'Ändra':'Lägg till'} serviceobjekt</h2><form id="equipmentform"><input type="hidden" name="id" value="${esc(e?.id||'')}"><div class="field"><label>Kund *</label><select name="customer_id" required>${optionList(table('customers').map(c=>[c.id,c.name]),cid)}</select></div><div class="field"><label>Portnummer / objektnummer *</label><input name="number" required value="${esc(e?.number||'')}"></div><div class="field"><label>Porttyp / servicemall</label><select name="template_id" id="obj-template">${serviceTemplateOptions(e?.template_id)}</select></div><div class="field"><label>Brandportsutförande (om brandport)</label><select name="subtype">${optionList([['','Ej brandport / välj senare'],['Skjutbrandport','Skjutbrandport'],['Vikbrandport','Vikbrandport'],['Brandjalusi','Brandjalusi']],e?.subtype||'')}</select></div><div class="fieldgroup"><div class="field"><label>Fabrikat</label><input name="manufacturer" value="${esc(e?.manufacturer||'')}"></div><div class="field"><label>Modell</label><input name="model" value="${esc(e?.model||'')}"></div></div><div class="field"><label>Styrning</label><input name="controller" value="${esc(e?.controller||'')}" placeholder="t.ex. Hörmann A445"></div><div class="field"><label>Serienummer</label><input name="serial_no" value="${esc(e?.serial_no||'')}"></div><div class="fieldgroup"><div class="field"><label>Serviceintervall</label><select name="interval_months">${optionList([['','Välj intervall'],[3,'3 månader'],[6,'6 månader'],[12,'12 månader']].map(([a,b])=>[String(a),b]),String(e?.interval_months||customerBy(cid)?.service_interval_months||''))}</select></div><div class="field"><label>Nästa service</label><input type="date" name="next_service_on" value="${esc(e?.next_service_on||'')}"></div></div><div class="toolbar"><button type="button" class="action secondary" data-action="close-modal">Avbryt</button><button type="submit" class="action">Spara objekt</button></div></form>`;}
+function equipmentForm(e){let cid=e?.customer_id||sys.selectedCustomer||table('customers')[0]?.id;return `<h2>${e?'Ändra':'Lägg till'} serviceobjekt</h2><form id="equipmentform"><input type="hidden" name="id" value="${esc(e?.id||'')}"><div class="field"><label>Kund *</label><select name="customer_id" required>${optionList(table('customers').map(c=>[c.id,c.name]),cid)}</select></div><div class="field"><label>Portnummer / objektnummer *</label><input name="number" required value="${esc(e?.number||'')}"></div><div class="field"><label>Porttyp / servicemall</label><select name="template_id" id="obj-template">${serviceTemplateOptions(e?.template_id)}</select></div><div class="field"><label>Brandportsutförande (om brandport)</label><select name="subtype">${optionList([['','Ej brandport / välj senare'],['Skjutbrandport','Skjutbrandport'],['Vikbrandport','Vikbrandport'],['Brandjalusi','Brandjalusi']],e?.subtype||'')}</select></div><div class="fieldgroup"><div class="field"><label>Fabrikat</label><input name="manufacturer" value="${esc(e?.manufacturer||'')}"></div><div class="field"><label>Modell</label><input name="model" value="${esc(e?.model||'')}"></div></div><div class="field"><label>Styrning</label><input name="controller" value="${esc(e?.controller||'')}" placeholder="t.ex. Hörmann A445"></div><div class="field"><label>Serienummer</label><input name="serial_no" value="${esc(e?.serial_no||'')}"></div><div class="fieldgroup"><div class="field"><label>Serviceintervall</label><select name="interval_months">${optionList([['','Välj intervall'],[3,'3 månader'],[6,'6 månader'],[12,'12 månader']].map(([a,b])=>[String(a),b]),String(e?.interval_months||customerBy(cid)?.service_interval_months||''))}</select></div><div class="field"><label>Nästa service</label><input type="date" name="next_service_on" value="${esc(e?.next_service_on||'')}"></div></div><div class="toolbar"><button type="button" class="action secondary" data-action="close-modal">Avbryt</button><button type="button" class="action" data-save-equipment="yes">Spara objekt</button></div></form>`;}
 function newJobForm(){return `<h2>Starta serviceuppdrag</h2><form id="jobform"><div class="field"><label>Välj kund</label><select name="customer_id" id="newjobcustomer" required>${optionList(table('customers').map(c=>[c.id,c.name]),sys.selectedCustomer||table('customers')[0]?.id)}</select></div><div class="field"><label>Servicedatum</label><input type="date" name="service_date" value="${new Date().toISOString().slice(0,10)}"></div><div class="notify">Alla kundens registrerade objekt kopplas till uppdraget. De kan kontrolleras över flera dagar. Kontrollresultat börjar alltid tomma.</div><div class="toolbar"><button type="button" class="action secondary" data-action="close-modal">Avbryt</button><button class="action" type="submit">Starta service</button></div></form>`;}
 function modal(html){sys.modal=html;render();}
 async function saveAnswer(jeid,itemid,answer,description=''){
@@ -570,6 +570,55 @@ document.addEventListener('click',async function saveCustomerDirect(event){
   const message=err.name==='AbortError'?'Databasen svarade inte inom 13 sekunder.':err.message||String(err);
   show('Kunde inte spara: '+message,true);console.error('Customer save failed',err);
  }finally{const still=document.querySelector('#customerform [data-save-customer]');if(still){still.disabled=false;still.textContent='Spara kund';}}
+},true);
+// Independent object save, matching the tested customer save flow.
+document.addEventListener('click',async function saveEquipmentDirect(event){
+ const button=event.target.closest('[data-save-equipment]');
+ if(!button)return;
+ event.preventDefault();event.stopPropagation();
+ const form=button.closest('#equipmentform');
+ if(!form||button.disabled)return;
+ if(!form.reportValidity())return;
+ const data=new FormData(form),value=k=>String(data.get(k)||'').trim();
+ const customerId=value('customer_id'),templateId=value('template_id');
+ const customer=customerBy(customerId);
+ const interval=value('interval_months')?Number(value('interval_months')):(customer?.service_interval_months||null);
+ const record={customer_id:customerId,number:value('number'),template_id:templateId,subtype:value('subtype'),manufacturer:value('manufacturer'),model:value('model'),controller:value('controller'),serial_no:value('serial_no'),interval_months:interval,next_service_on:value('next_service_on')||null};
+ let notice=form.querySelector('.save-feedback');
+ if(!notice){notice=document.createElement('div');notice.className='save-feedback';notice.setAttribute('role','status');form.prepend(notice);}
+ const show=(message,bad=false)=>{notice.textContent=message;notice.style.cssText='padding:14px;border-radius:9px;font-weight:700;background:'+(bad?'#ffdddd':'#fff0a6')+';color:#18334c';};
+ if(!customer||!record.number||!sys.templates.some(t=>t.id===templateId)){show('Välj kund, objektnummer och en giltig porttyp.',true);return;}
+ if(templateId==='GE-BRANDPORT-01'&&!record.subtype){show('Välj brandportsutförande.',true);return;}
+ button.disabled=true;button.textContent='Sparar objekt…';show('Skickar objektet till databasen…');
+ try{
+  let equipment;
+  if(live){
+   const chosenId=value('id')||(form.dataset.objectSaveId||(form.dataset.objectSaveId=id()));
+   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),13000);
+   try{
+    const endpoint=config.SUPABASE_URL.replace(/\/$/,'')+'/rest/v1/equipment?on_conflict=id';
+    const payload={id:chosenId,org_id:org(),...record};
+    const response=await fetch(endpoint,{method:'POST',mode:'cors',cache:'no-store',signal:controller.signal,headers:{apikey:config.SUPABASE_ANON_KEY,Authorization:'Bearer '+config.SUPABASE_ANON_KEY,'Content-Type':'application/json',Prefer:'resolution=merge-duplicates,return=representation'},body:JSON.stringify([payload])});
+    const body=await response.text();
+    if(!response.ok)throw Error('Databasfel '+response.status+': '+body.slice(0,350));
+    equipment=JSON.parse(body)[0];
+   }finally{clearTimeout(timer);}
+  }else{
+   if(value('id'))equipment=await updateRow('equipment',value('id'),record);
+   else equipment=(await insertRows('equipment',[{org_id:org(),...record}]))[0];
+  }
+  if(!equipment?.id)throw Error('Objektet kunde inte bekräftas av databasen.');
+  const existing=table('equipment').findIndex(x=>x.id===equipment.id);
+  if(existing>=0)table('equipment')[existing]=equipment;else table('equipment').push(equipment);
+  sys.selectedCustomer=customerId;sys.customerDetailOpen=true;sys.view='customers';sys.filter='';
+  sys.modal=null;sys.banner='Objekt sparat: '+equipment.number;sys.alertClass='success';render();
+ }catch(error){
+  show('Kunde inte spara objekt: '+(error.name==='AbortError'?'Tidsgränsen 13 sekunder passerades.':error.message||String(error)),true);
+  console.error('Object save failed',error);
+ }finally{
+  const current=document.querySelector('#equipmentform [data-save-equipment]');
+  if(current){current.disabled=false;current.textContent='Spara objekt';}
+ }
 },true);
 document.addEventListener('submit',handleSubmit);
 document.addEventListener('change',async ev=>{if(ev.target.dataset.intervalObject){
