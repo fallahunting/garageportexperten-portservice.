@@ -152,7 +152,7 @@ const labelStatus=jeid=>{const je=jeBy(jeid),e=equipBy(je?.equipment_id);if(!e)r
 function shell(title,subtitle,content){
  const nav=[['home','⌂','Startsida'],['customers','▦','Kunder'],['jobs','☷','Serviceuppdrag'],['checklist','☑','Checklista'],['issues','!','Öppna brister'],['reminders','▤','Påminnelser']];
  const n=nav.map(([k,ico,lab])=>`<button class="${sys.view===k?'active':''}" data-nav="${k}">${ico} &nbsp; ${lab}</button>`).join('');
- const inner=`<div class="shell"><aside class="side" id="sidebar"><div class="brand gpe-menu-brand"><img src="./assets/gpe-app-icon-192.png?v=6" alt="GPE Finspång Service App" class="gpe-menu-logo" /></div><div class="nav">${n}</div><div class="sidefoot">${live&&!publicTest?`${esc(sys.profile.display_name)}<br>${esc(sys.profile.role==='admin'?'Administratör':'Montör')}`:`<strong>${esc(sys.profile.display_name)}</strong><div class="muted small">Aktiv testmontör – byt längst upp i appen</div>`}</div></aside><div class="main">${sys.view==='home'?'<div class="gpe-top-brand"><img src="./assets/gpe-mascot-banner.webp?v=6" alt="GPE Finspång Service App" /></div>':''}<header class="topbar"><button class="mobilemenu" data-action="menu" aria-label="Öppna meny">☰ <span>Meny</span></button></header>${(publicTest||!live)?`<div class="technician-bar"><label for="active-technician">Aktiv montör</label><select id="active-technician" aria-label="Välj aktiv montör">${optionList(table('profiles').filter(p=>p.active!==false).map(p=>[p.user_id,p.display_name]),sys.profile.user_id)}</select><span class="technician-hint">Nya kontrollsvar registreras på vald montör. Ingen inloggning i testläget.</span></div>`:``}<main class="content"><h1>${esc(title)}</h1>${subtitle?`<p class="subhead">${esc(subtitle)}</p>`:''}${sys.banner?`<div class="notify ${sys.alertClass}">${esc(sys.banner)}</div>`:''}${content}<p class="footer">GPE Finspång Service App v6.1 ${publicTest?'· ÖPPEN TESTMILJÖ – uppgifter delas mellan alla besökare. Inga mejl skickas.':live?'· Företagsdatabas':'· LOKALT TEST – inga e-postutskick'}</p></main></div></div>`;
+ const inner=`<div class="shell"><aside class="side" id="sidebar"><div class="brand gpe-menu-brand"><img src="./assets/gpe-app-icon-192.png?v=6" alt="GPE Finspång Service App" class="gpe-menu-logo" /></div><div class="nav">${n}</div><div class="sidefoot">${live&&!publicTest?`${esc(sys.profile.display_name)}<br>${esc(sys.profile.role==='admin'?'Administratör':'Montör')}`:`<strong>${esc(sys.profile.display_name)}</strong><div class="muted small">Aktiv testmontör – byt längst upp i appen</div>`}</div></aside><div class="main">${sys.view==='home'?'<div class="gpe-top-brand"><img src="./assets/gpe-mascot-banner.webp?v=6" alt="GPE Finspång Service App" /></div>':''}<header class="topbar"><button class="mobilemenu" data-action="menu" aria-label="Öppna meny">☰ <span>Meny</span></button></header>${(publicTest||!live)?`<div class="technician-bar"><label for="active-technician">Aktiv montör</label><select id="active-technician" aria-label="Välj aktiv montör">${optionList(table('profiles').filter(p=>p.active!==false).map(p=>[p.user_id,p.display_name]),sys.profile.user_id)}</select><span class="technician-hint">Nya kontrollsvar registreras på vald montör. Ingen inloggning i testläget.</span></div>`:``}<main class="content"><h1>${esc(title)}</h1>${subtitle?`<p class="subhead">${esc(subtitle)}</p>`:''}${sys.banner?`<div class="notify ${sys.alertClass}">${esc(sys.banner)}</div>`:''}${content}<p class="footer">GPE Finspång Service App v6.2 ${publicTest?'· ÖPPEN TESTMILJÖ – uppgifter delas mellan alla besökare. Inga mejl skickas.':live?'· Företagsdatabas':'· LOKALT TEST – inga e-postutskick'}</p></main></div></div>`;
  $('#app').innerHTML=inner+(sys.modal?`<div class="modalback"><div class="modal" role="dialog" aria-modal="true">${sys.modal}</div></div>`:'');
 }
 function render(){if(!sys.signedIn)return renderLogin();let title='',sub='',body='';
@@ -499,30 +499,57 @@ document.addEventListener('click',async ev=>{
   if(el.dataset.action)await handleAction(el.dataset.action,el);
  }catch(e){notify('Ett fel uppstod: '+e.message,true)}
 });
-document.addEventListener('click',async function saveCustomerFromTap(event){
+// Standalone customer save: no modal rerender, no nested form handler, one REST request.
+document.addEventListener('click',async function saveCustomerDirect(event){
  const button=event.target.closest('[data-save-customer]');
  if(!button)return;
- event.preventDefault();
- event.stopPropagation();
- const form=button.closest('form');
- if(!form)return;
- if(!form.reportValidity()){const invalid=form.querySelector(':invalid');if(invalid){invalid.focus();invalid.scrollIntoView({block:'center'});}return;}
- button.disabled=true;
- button.textContent='Sparar kund...';
- let feedback=form.querySelector('.save-feedback');
- if(!feedback){feedback=document.createElement('div');feedback.className='save-feedback';feedback.setAttribute('role','status');form.prepend(feedback);}
- feedback.textContent='Sparar kunden till databasen…';
- feedback.style.cssText='padding:14px;background:#fff3b2;color:#173650;font-weight:bold;border-radius:9px;';
- try{await handleSubmit({target:form,preventDefault(){}});}
- catch(err){
-  let area=form.querySelector('.form-save-error');
-  if(!area){area=document.createElement('div');area.className='form-save-error';form.prepend(area);}
-  area.textContent='Sparfel: '+(err?.message||String(err));
-  area.style.cssText='padding:15px;background:#fff0f0;color:#a00;font-weight:bold';
- }finally{
-  const still=document.querySelector('#customerform [data-save-customer]');
-  if(still){still.disabled=false;still.textContent='Spara kund';}
- }
+ event.preventDefault();event.stopPropagation();
+ const form=button.closest('#customerform');
+ if(!form || button.disabled)return;
+ if(!form.reportValidity())return;
+ const data=new FormData(form),value=k=>String(data.get(k)||'').trim();
+ const monthsValue=Number(value('service_interval_months'));
+ if(!value('name')||![3,6,12].includes(monthsValue))return;
+ const record={customer_type:value('customer_type'),name:value('name'),address:value('address'),contact:value('contact'),phone:value('phone'),email:value('email'),service_interval_months:monthsValue};
+ let notice=form.querySelector('.save-feedback');
+ if(!notice){notice=document.createElement('div');notice.className='save-feedback';notice.setAttribute('role','status');form.prepend(notice);}
+ const show=(message,bad=false)=>{notice.textContent=message;notice.style.cssText='padding:14px;border-radius:9px;font-weight:700;background:'+(bad?'#ffdddd':'#fff0a6')+';color:#18334c';};
+ button.disabled=true;button.textContent='Sparar kund…';show('1/3 Kontrollerar kunduppgifter…');
+ try{
+  let customer;
+  if(live){
+   const isNew=!value('id');
+   const chosenId=value('id')||(form.dataset.customerSaveId||(form.dataset.customerSaveId=id()));
+   const request={id:chosenId,org_id:org(),...record};
+   const abort=new AbortController();
+   const timer=setTimeout(()=>abort.abort(),13000);
+   try{
+    show('2/3 Skickar kunden till databasen…');
+    const url=config.SUPABASE_URL.replace(/\/$/,'')+'/rest/v1/customers?on_conflict=id';
+    const res=await fetch(url,{method:'POST',mode:'cors',cache:'no-store',signal:abort.signal,headers:{'apikey':config.SUPABASE_ANON_KEY,'Authorization':'Bearer '+config.SUPABASE_ANON_KEY,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates,return=representation'},body:JSON.stringify([request])});
+    const body=await res.text();
+    if(!res.ok)throw Error('Databasen svarade '+res.status+': '+body.slice(0,280));
+    const rows=JSON.parse(body);customer=rows[0];
+    if(!customer?.id)throw Error('Ingen kund returnerades från databasen.');
+   }finally{clearTimeout(timer);}
+   if(!isNew){
+    for(const e of equipmentFor(chosenId))await updateRow('equipment',e.id,{interval_months:monthsValue});
+   }
+  }else{
+   if(value('id'))customer=await updateRow('customers',value('id'),record);
+   else customer=(await insertRows('customers',[{org_id:org(),...record}]))[0];
+  }
+  if(!customer?.id)throw Error('Kunden kunde inte bekräftas.');
+  show('3/3 Kund sparad. Uppdaterar listan…');
+  sys.selectedCustomer=customer.id;sys.customerDetailOpen=true;sys.filter='';sys.view='customers';
+  // Update the local customer list immediately; do not wait for a full eight-table refresh.
+  const existing=table('customers').findIndex(c=>c.id===customer.id);
+  if(existing>=0)table('customers')[existing]=customer;else table('customers').push(customer);
+  sys.modal=null;sys.banner='Kund sparad: '+customer.name;sys.alertClass='success';render();
+ }catch(err){
+  const message=err.name==='AbortError'?'Databasen svarade inte inom 13 sekunder.':err.message||String(err);
+  show('Kunde inte spara: '+message,true);console.error('Customer save failed',err);
+ }finally{const still=document.querySelector('#customerform [data-save-customer]');if(still){still.disabled=false;still.textContent='Spara kund';}}
 },true);
 document.addEventListener('submit',handleSubmit);
 document.addEventListener('change',async ev=>{if(ev.target.dataset.intervalObject){
