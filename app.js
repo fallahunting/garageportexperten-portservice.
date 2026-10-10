@@ -320,17 +320,27 @@ async function generateProtocol(jobId,send){
  page.drawText('GARAGEPORT',{x:124,y:logoY-4,size:17,font:regular,color:blue});
  page.drawText('EXPERTEN',{x:124,y:logoY-28,size:21,font:bold,color:blue});
  page.drawText('PROTOKOLL',{x:329,y:pg.h-48,size:16,font:bold,color:navy});
- page.drawRectangle({x:326,y:pg.h-158,width:224,height:89,borderWidth:1,borderColor:gray});
- textBlock('Kund',339,pg.h-90,190,bold,9,navy,11);
- textBlock(p.customer.name,339,pg.h-108,198,bold,11,navy,13);
- page.drawText('Servicedatum: '+safe(p.job.service_date),{x:338,y:pg.h-144,size:9,font:regular,color:navy});
- y=pg.h-188;
- add('SERVICEUPPGIFTER',{bold:true,size:12,after:7});
- add('Kund: '+p.customer.name,{bold:true,size:11});
- add('Adress: '+p.customer.address);
+ // Entire customer and service identification in the right-hand information box.
+ const boxX=326,boxW=224,boxTop=pg.h-69,boxBottom=pg.h-278;
+ page.drawRectangle({x:boxX,y:boxBottom,width:boxW,height:boxTop-boxBottom,borderWidth:1,borderColor:gray});
+ let infoY=boxTop-19;
+ const detail=(label,value)=>{
+  if(value===undefined||value===null||String(value).trim()==='')return;
+  const lines=wrap(String(value),regular,9.1,boxW-28);
+  page.drawText(safe(label),{x:boxX+13,y:infoY,size:8.5,font:bold,color:navy});infoY-=13;
+  for(const line of lines){page.drawText(line||' ',{x:boxX+13,y:infoY,size:9.1,font:regular,color:navy});infoY-=12;}
+  infoY-=5;
+ };
  const technician=first(table('profiles'),x=>x.user_id===p.job.finished_by)?.display_name||sys.profile.display_name;
- add('Montör: '+technician);
- add('Antal portar/objekt: '+p.all+'   Utan brister: '+p.good.length+'   Med brister: '+p.bad.length,{after:13});
+ detail('Kund',p.customer.name);
+ detail('Adress',p.customer.address);
+ detail('Kontaktperson',p.customer.contact);
+ detail('Telefon',p.customer.phone);
+ detail('E-post',p.customer.email);
+ detail('Servicedatum',p.job.service_date);
+ detail('Montör',technician);
+ y=boxBottom-25;
+ add('Antal portar/objekt: '+p.all+'   Utan brister: '+p.good.length+'   Med brister: '+p.bad.length,{after:10});
  heading('OBJEKT UTAN ANMÄRKNING ('+p.good.length+')');
  add(p.good.map(x=>x.number).join(', ')||'Inga',{after:11});
  heading('OBJEKT MED BRISTER ('+p.bad.length+')');
