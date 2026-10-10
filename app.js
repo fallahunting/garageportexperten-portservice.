@@ -309,8 +309,8 @@ async function handleSubmit(ev){const form=ev.target;if(!['loginform','customerf
  try{
   if(form.id==='loginform'){const {error}=await client.auth.signInWithPassword({email:v('email'),password:v('password')});if(error)throw error;return;}
   if(form.id==='customerform'){
-   const rec={customer_type:v('customer_type'),name:v('name'),address:v('address'),contact:v('contact'),phone:v('phone'),email:v('email')};
-   if(v('id'))await updateRow('customers',v('id'),rec);else{const [c]=await insertRows('customers',[{org_id:org(),...rec}]);sys.selectedCustomer=c.id;}
+   const rec={customer_type:v('customer_type'),name:v('name'),address:v('address'),contact:v('contact'),phone:v('phone'),email:v('email'),service_interval_months:Number(v('service_interval_months'))};
+   if(v('id')){await updateRow('customers',v('id'),rec);for(const e of equipmentFor(v('id')))await updateRow('equipment',e.id,{interval_months:rec.service_interval_months});}else{const [c]=await insertRows('customers',[{org_id:org(),...rec}]);sys.selectedCustomer=c.id;}
    sys.modal=null;sys.view='customers';await refresh();return;
   }
   if(form.id==='equipmentform'){
