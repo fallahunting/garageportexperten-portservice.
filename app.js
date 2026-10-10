@@ -438,6 +438,7 @@ async function handleSubmit(ev){const form=ev.target;if(!['loginform','customerf
   let area=form.querySelector('.form-save-error');
   if(!area){area=document.createElement('div');area.className='form-save-error warning';area.setAttribute('role','alert');form.prepend(area);}
   area.textContent=msg;
+  area.style.cssText='padding:16px;background:#fff1f0;color:#9b1717;font-size:18px;font-weight:700;border:2px solid #a22;border-radius:10px;';
   sys.banner=msg;sys.alertClass='error';
   area.scrollIntoView({behavior:'smooth',block:'nearest'});
  }finally{form.dataset.saving='0';status.remove();}
@@ -475,7 +476,7 @@ document.addEventListener('click',async function saveCustomerFromTap(event){
  event.stopPropagation();
  const form=button.closest('form');
  if(!form)return;
- if(!form.reportValidity())return;
+ if(!form.reportValidity()){const invalid=form.querySelector(':invalid');if(invalid){invalid.focus();invalid.scrollIntoView({block:'center'});}return;}
  button.disabled=true;
  button.textContent='Sparar kund...';
  try{await handleSubmit({target:form,preventDefault(){}});}
