@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1170" height="390" viewBox="0 0 1170 390" role="img" aria-labelledby="title">
+<title>GPE Finspång Service App – montör med verktyg</title>
+<rect width="1170" height="390" rx="40" fill="#ffeb41"/>
+<g transform="translate(40 30)">
+<rect x="0" y="125" width="340" height="213" rx="16" fill="#003a77" stroke="#00629c" stroke-width="10"/>
+<path d="M5 183H337M5 246H337M5 308H337" stroke="#227ab5" stroke-width="10"/>
+<rect x="20" y="151" width="85" height="29" rx="5" fill="#d7ebf7"/>
+<circle cx="132" cy="187" r="34" fill="#84502a" stroke="#092b46" stroke-width="9"/>
+<circle cx="316" cy="187" r="34" fill="#84502a" stroke="#092b46" stroke-width="9"/>
+<path d="M160 276Q116 347 202 347H280Q355 347 336 276" fill="#00629c" stroke="#092b46" stroke-width="11"/>
+<ellipse cx="226" cy="190" rx="104" ry="117" fill="#774b2b" stroke="#092b46" stroke-width="10"/>
+<ellipse cx="226" cy="222" rx="79" ry="64" fill="#f3c58d" stroke="#092b46" stroke-width="6"/>
+<path d="M119 139Q127 58 211 51Q299 47 345 121L315 150H142Z" fill="#00629c" stroke="#092b46" stroke-width="10"/>
+<path d="M167 89Q226 70 284 93L287 123H160Z" fill="#ffdf23"/>
+<text x="223" y="116" text-anchor="middle" fill="#003e7e" font-family="Arial,sans-serif" font-weight="900" font-size="33">GPE</text>
+<path d="M118 150Q215 128 343 153L322 169Q232 152 141 171Z" fill="#092b46"/>
+<path d="M153 178Q182 159 216 176L211 203Q172 220 148 196Z" fill="#001b34" stroke="white" stroke-width="3"/>
+<path d="M230 177Q260 159 292 177L290 194Q262 224 229 201Z" fill="#001b34" stroke="white" stroke-width="3"/>
+<path d="M184 248Q229 277 269 243" fill="none" stroke="#092b46" stroke-width="9" stroke-linecap="round"/>
+<path d="M319 285L359 202 375 195 400 209 393 236 377 237 369 223 344 294" fill="#cfd7df" stroke="#092b46" stroke-width="9" stroke-linejoin="round"/>
+</g>
+<text x="480" y="224" fill="#003e7e" font-size="212" font-family="Arial Black,Arial,sans-serif" font-weight="900" letter-spacing="-15">GPE</text>
+<rect x="485" y="258" width="650" height="75" rx="16" fill="#ffd900"/>
+<text x="501" y="310" fill="#003e7e" font-size="46" font-family="Arial,sans-serif" font-weight="900">FINSPÅNG SERVICE APP</text>
+</svg>
