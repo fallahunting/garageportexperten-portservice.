@@ -321,7 +321,7 @@ async function generateProtocol(jobId,send){
  page.drawText('EXPERTEN',{x:124,y:logoY-28,size:21,font:bold,color:blue});
  page.drawText('PROTOKOLL',{x:329,y:pg.h-48,size:16,font:bold,color:navy});
  // Entire customer and service identification in the right-hand information box.
- const boxX=326,boxW=224,boxTop=pg.h-69,boxBottom=pg.h-278;
+ const boxX=326,boxW=224,boxTop=pg.h-69,boxBottom=pg.h-338;
  page.drawRectangle({x:boxX,y:boxBottom,width:boxW,height:boxTop-boxBottom,borderWidth:1,borderColor:gray});
  let infoY=boxTop-19;
  const detail=(label,value)=>{
