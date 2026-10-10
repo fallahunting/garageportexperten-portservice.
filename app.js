@@ -205,7 +205,7 @@ function renderReminders(){const now=new Date().toISOString().slice(0,10),to=new
  return `<div class="notify">Servicepåminnelserna ska gå till ansvarig montör, inte till kunden. Här visas objekt inom 10 dagar och försenade serviceobjekt. Automatiska påminnelsemejl aktiveras vid produktionssättning.</div><div class="card">${rs.map(e=>`<div class="listrow"><div><strong>${esc(customerBy(e.customer_id)?.name)} – ${esc(e.number)}</strong><div class="muted small">Nästa service ${esc(e.next_service_on)} · ${e.interval_months} månader</div></div><span class="badge ${e.next_service_on<now?'bad':'warn'}">${e.next_service_on<now?'Försenad':'Inom 10 dagar'}</span></div>`).join('')||'<p>Inga aktuella servicepåminnelser.</p>'}</div>`;
 }
 function optionList(data,current){return data.map(([value,label])=>`<option value="${esc(value)}" ${value===current?'selected':''}>${esc(label)}</option>`).join('')}
-function customerForm(c){const isEdit=!!c;return `<h2>${isEdit?'Ändra kund':'Ny kund'}</h2><form id="customerform"><input type="hidden" name="id" value="${esc(c?.id||'')}"><div class="field"><label>Kundtyp</label><select name="customer_type">${optionList(['Företag','BRF','Samfällighet'].map(x=>[x,x]),c?.customer_type||'Företag')}</select></div><div class="field"><label>Namn *</label><input name="name" required value="${esc(c?.name||'')}"></div><div class="field"><label>Serviceintervall för alla kundens portar</label><select name="service_interval_months" required>${optionList([['','Välj intervall'],['3','3 månader'],['6','6 månader'],['12','12 månader']],String(c?.service_interval_months||''))}</select><p class="small muted">Gäller alla portar hos kunden och ärvs av nya portar.</p></div><div class="field"><label>Adress</label><input name="address" value="${esc(c?.address||'')}"></div><div class="fieldgroup"><div class="field"><label>Kontaktperson</label><input name="contact" value="${esc(c?.contact||'')}"></div><div class="field"><label>Telefon</label><input name="phone" value="${esc(c?.phone||'')}"></div></div><div class="field"><label>E-post för serviceprotokoll</label><input type="email" name="email" value="${esc(c?.email||'')}"></div><div class="toolbar"><button type="button" class="action secondary" data-action="close-modal">Avbryt</button><button class="action" type="submit">Spara kund</button></div></form>`;}
+function customerForm(c){const isEdit=!!c;return `<h2>${isEdit?'Ändra kund':'Ny kund'}</h2><form id="customerform"><input type="hidden" name="id" value="${esc(c?.id||'')}"><div class="field"><label>Kundtyp</label><select name="customer_type">${optionList(['Företag','BRF','Samfällighet'].map(x=>[x,x]),c?.customer_type||'Företag')}</select></div><div class="field"><label>Namn *</label><input name="name" required value="${esc(c?.name||'')}"></div><div class="field"><label>Serviceintervall för alla kundens portar</label><select name="service_interval_months" required>${optionList([['','Välj intervall'],['3','3 månader'],['6','6 månader'],['12','12 månader']],String(c?.service_interval_months||''))}</select><p class="small muted">Gäller alla portar hos kunden och ärvs av nya portar.</p></div><div class="field"><label>Adress</label><input name="address" value="${esc(c?.address||'')}"></div><div class="fieldgroup"><div class="field"><label>Kontaktperson</label><input name="contact" value="${esc(c?.contact||'')}"></div><div class="field"><label>Telefon</label><input name="phone" value="${esc(c?.phone||'')}"></div></div><div class="field"><label>E-post för serviceprotokoll</label><input type="email" name="email" value="${esc(c?.email||'')}"></div><div class="toolbar"><button type="button" class="action secondary" data-action="close-modal">Avbryt</button><button class="action" type="button" data-action="save-customer">Spara kund</button></div></form>`;}
 function serviceTemplateOptions(selected){
  const groups=[
   ['Industriservice',[
@@ -381,6 +381,13 @@ async function handleAction(a,btn){
  }
  if(a==='close-modal'){sys.modal=null;render();return}
  if(a==='logout'){if(live)await client.auth.signOut();else notify('Demoläget saknar riktig inloggning.');return}
+ if(a==='save-customer'){
+  const form=document.querySelector('#customerform');
+  if(!form)return;
+  if(!form.reportValidity())return;
+  await handleSubmit({target:form,preventDefault(){}});
+  return;
+ }
  if(a==='new-customer'){modal(customerForm(null));return}
  if(a==='edit-customer'){modal(customerForm(customerBy(sys.selectedCustomer)));return}
  if(a==='new-equipment'){if(!table('customers').length){notify('Lägg upp en kund först.',true);return}modal(equipmentForm(null));return}
@@ -398,8 +405,14 @@ async function handleSubmit(ev){const form=ev.target;if(!['loginform','customerf
   if(form.id==='customerform'){
    if(![3,6,12].includes(Number(v('service_interval_months'))))throw Error('Välj 3, 6 eller 12 månaders serviceintervall för kunden.');
    const rec={customer_type:v('customer_type'),name:v('name'),address:v('address'),contact:v('contact'),phone:v('phone'),email:v('email'),service_interval_months:Number(v('service_interval_months'))};
-   if(v('id')){await updateRow('customers',v('id'),rec);for(const e of equipmentFor(v('id')))await updateRow('equipment',e.id,{interval_months:rec.service_interval_months});}else{const [c]=await insertRows('customers',[{org_id:org(),...rec}]);sys.selectedCustomer=c.id;}
-   sys.modal=null;sys.view='customers';await refresh();return;
+   if(v('id')){await updateRow('customers',v('id'),rec);for(const e of equipmentFor(v('id')))await updateRow('equipment',e.id,{interval_months:rec.service_interval_months});}else{
+    const added=await insertRows('customers',[{org_id:org(),...rec}]);
+    if(!added?.[0]?.id)throw Error('Databasen bekräftade inte att kunden skapades.');
+    sys.selectedCustomer=added[0].id;
+   }
+   sys.view='customers';sys.customerDetailOpen=true;sys.filter='';await refresh();
+   if(!customerBy(sys.selectedCustomer))throw Error('Kunden gick inte att hitta efter sparning.');
+   sys.modal=null;sys.banner='Kunden har sparats: '+rec.name;sys.alertClass='success';render();return;
   }
   if(form.id==='equipmentform'){
    const rec={customer_id:v('customer_id'),number:v('number'),template_id:v('template_id'),subtype:v('subtype'),manufacturer:v('manufacturer'),model:v('model'),controller:v('controller'),serial_no:v('serial_no'),interval_months:v('interval_months')?Number(v('interval_months')):(customerBy(v('customer_id'))?.service_interval_months||null),next_service_on:v('next_service_on')||null,responsible_user:v('responsible_user')||null};
