@@ -1,0 +1,21 @@
+{
+  "id": "./",
+  "name": "Garageportexperten Portservice",
+  "short_name": "Portservice",
+  "description": "Servicehantering för Garageportexperten: industriportar, lastbryggor, grindar och brandportar.",
+  "lang": "sv-SE",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#ffffff",
+  "theme_color": "#ffeb41",
+  "icons": [
+    {
+      "src": "assets/app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
