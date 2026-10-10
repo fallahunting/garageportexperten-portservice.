@@ -194,7 +194,7 @@ function renderIndividual(je,e,job){const pts=itemsFor(e);const cats=[...new Set
  return `<div class="row" style="margin:10px 0 13px"><div><strong>${esc(e.number)}</strong><div class="small muted">${esc(templateTitle(e.template_id))} · ${esc(e.manufacturer||'')} ${esc(e.model||'')} ${e.controller?'· Styrning '+esc(e.controller):''}</div></div><span class="badge ${done===pts.length?'good':'warn'}">${done} / ${pts.length} klara</span></div>${openHtml}${cats.map((cat,idx)=>renderGroup(je,e,job,cat,idx,pts.filter(p=>p.group===cat))).join('')}<div class="toolbar"><button class="action secondary" data-action="prev-equipment">← Föregående</button><button class="action" data-action="next-equipment">Nästa objekt →</button></div>`;
 }
 function renderGroup(je,e,job,cat,idx,pts){const key=je.id+'|'+cat;const expanded=sys.groupOpen[key]??(idx===0);const completed=pts.filter(p=>{const a=ansFor(je.id,p.id);return a&&(a.answer!=='Brist'||a.description.trim())}).length;
- const bulk=pts.filter(p=>p.bulk&&!p.individual&&p.condition==='Alltid');const hasBrist=pts.some(p=>ansFor(je.id,p.id)?.answer==='Brist');
+ const bulk=pts.filter(p=>p.bulk&&!p.individual&&p.condition==='Alltid'&&!ansFor(je.id,p.id));const hasBrist=pts.some(p=>ansFor(je.id,p.id)?.answer==='Brist');
  return `<section class="group"><div class="grouphead"><button class="linkbtn grouptitle" data-toggle-group="${esc(key)}">${expanded?'▾':'▸'} ${esc(cat)}</button><span class="counter">${completed}/${pts.length}</span>${job.status==='draft'?`<button class="action yellow" data-bulk="${esc(key)}" ${hasBrist||!bulk.length?'disabled':''} title="Markera endast tillämpliga vanliga punkter som OK">Godkänn kategorin (${bulk.length})</button>`:''}</div>${expanded?`<div class="groupbody"><ul class="questions">${pts.map(p=>renderQuestion(je,job,p)).join('')}</ul></div>`:''}</section>`;
 }
 function renderQuestion(je,job,p){const a=ansFor(je.id,p.id),w=job.status==='draft';const canNA=p.condition!=='Alltid'&&p.condition!=='Alltid – motordriven port';
@@ -224,8 +224,9 @@ async function onAnswer(jeid,itemid,answer){
 }
 async function onBulk(key){const [jeid,cat]=key.split('|'),e=equipBy(jeBy(jeid)?.equipment_id);
  const ps=itemsFor(e).filter(p=>p.group===cat);if(ps.some(p=>ansFor(jeid,p.id)?.answer==='Brist')){notify('Kategorin innehåller brister. Kontrollera punkterna individuellt.',true);return;}
- const allow=ps.filter(p=>p.bulk&&!p.individual&&p.condition==='Alltid');
- if(!confirm(`Har du kontrollerat alla ${allow.length} punkter i ”${cat}” utan att hitta någon brist?`))return;
+ const allow=ps.filter(p=>p.bulk&&!p.individual&&p.condition==='Alltid'&&!ansFor(jeid,p.id));
+ if(!allow.length){notify('Inga återstående punkter att godkänna. Befintliga svar, inklusive Ej aktuellt, är bevarade.');return;}
+ if(!confirm(`Har du kontrollerat de ${allow.length} återstående punkterna i ”${cat}” utan att hitta någon brist? Tidigare Ej aktuellt och andra svar behålls.`))return;
  for(const p of allow)await saveAnswer(jeid,p.id,'OK');render();
 }
 function changeJE(delta){const jes=jesFor(sys.selectedJob),i=jes.findIndex(je=>je.id===sys.selectedJE);if(jes[i+delta]){sys.selectedJE=jes[i+delta].id;sys.groupOpen={};window.scrollTo(0,0);render()}}
