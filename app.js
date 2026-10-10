@@ -50,6 +50,21 @@ const sample=()=>{
 };
 function persist(){if(!live)localStorage.setItem(DEMOKEY,JSON.stringify(sys.tables));}
 function notify(message,bad=false){sys.banner=message;sys.alertClass=bad?'error':'success';render();}
+async function prepareDueJobs(){
+ if(!publicTest)return;
+ const horizon=new Date();horizon.setDate(horizon.getDate()+10);
+ const maxDate=horizon.toISOString().slice(0,10);
+ const available=table('equipment').filter(e=>e.active!==false&&e.next_service_on&&e.next_service_on<=maxDate&&[3,6,12].includes(e.interval_months));
+ let created=0;
+ for(const e of available){
+  const links=table('job_equipment').filter(je=>je.equipment_id===e.id);
+  if(links.some(je=>{const j=jobBy(je.job_id);return j&&(j.status==='draft'||(j.status==='completed'&&j.service_date===e.next_service_on))}))continue;
+  let job=table('service_jobs').find(j=>j.customer_id===e.customer_id&&j.service_date===e.next_service_on&&j.status==='draft');
+  if(!job){const rows=await insertRows('service_jobs',[{org_id:e.org_id,customer_id:e.customer_id,service_date:e.next_service_on,started_by:e.responsible_user||sys.user.id,status:'draft'}]);job=rows[0];table('service_jobs').push(job);}
+  const rows=await insertRows('job_equipment',[{org_id:e.org_id,job_id:job.id,equipment_id:e.id}]);table('job_equipment').push(rows[0]);created++;
+ }
+ if(created)await refresh();
+}
 async function init(){
  try{
    const res=await fetch('./checklists.json',{cache:'no-store'});if(!res.ok)throw Error('Checklistefilen kunde inte läsas');items=await res.json();
@@ -62,6 +77,7 @@ async function init(){
        sys.signedIn=true;
        sys.selectedCustomer='palladium-test-customer';
        await refresh();
+       await prepareDueJobs();
      }else{
        const {data}=await client.auth.getSession();
        if(data?.session)await loadUser(data.session.user);else renderLogin();
