@@ -181,7 +181,7 @@ function renderCustomers(){let list=table('customers');if(sys.filter)list=list.f
  return `<div class="toolbar"><input class="search" id="filter" placeholder="Sök kund eller adress" value="${esc(sys.filter)}" aria-label="Sök kund"><button class="action" data-action="new-customer">+ Ny kund</button></div><div class="card">${list.length?list.sort((a,b)=>a.name.localeCompare(b.name,'sv')).map(c=>`<div class="listrow"><div><strong>${esc(c.name)}</strong><div class="small muted">${esc(c.customer_type)} · ${esc(c.address)} · ${equipmentFor(c.id).length} objekt</div><div class="small muted">${esc(c.email)}</div></div><button class="action secondary" data-customer="${esc(c.id)}">Öppna</button></div>`).join(''):'<p>Ingen kund hittades.</p>'}</div>${sys.selectedCustomer&&sys.customerDetailOpen?renderCustomerDetail():''}`;
 }
 function renderCustomerDetail(){const c=customerBy(sys.selectedCustomer);if(!c)return'';
- return `<div class="card"><div class="toolbar"><h2>${esc(c.name)}</h2><div class="right"><button class="action secondary" data-action="edit-customer">Redigera</button><button class="action" data-action="new-equipment">+ Objekt</button><button class="action yellow" data-action="create-job">Starta service</button></div></div><p class="small muted">${esc(c.address)} · Kontakt: ${esc(c.contact)} · ${esc(c.phone)} · ${esc(c.email)}</p><h3>Registrerade objekt</h3>${equipmentFor(c.id).map(e=>`<div class="listrow"><div><strong>${esc(e.number)}</strong><div class="small muted">${esc(templateTitle(e.template_id))} ${e.manufacturer? '· '+esc(e.manufacturer):''} ${e.model?' '+esc(e.model):''} ${e.controller?'· Styrning '+esc(e.controller):''} · ${e.interval_months?e.interval_months+' mån':'Intervall ej valt'}</div></div><button class="action secondary" data-edit-equipment="${esc(e.id)}">Redigera</button></div>`).join('')||'<p>Inga objekt ännu.</p>'}</div>`;
+ return `<div class="card"><div class="toolbar"><h2>${esc(c.name)}</h2><div class="right"><button class="action secondary" data-action="edit-customer">Redigera</button><button class="action" data-action="new-equipment">+ Objekt</button><button class="action yellow" data-action="create-job">Starta service</button></div></div><p class="small muted">${esc(c.address)} · Kontakt: ${esc(c.contact)} · ${esc(c.phone)} · ${esc(c.email)}</p><h3>Registrerade objekt</h3>${equipmentFor(c.id).map(e=>`<div class="listrow"><div><strong>${esc(e.number)}</strong><div class="small muted">${esc(templateTitle(e.template_id))} ${e.manufacturer? '· '+esc(e.manufacturer):''} ${e.model?' '+esc(e.model):''} ${e.controller?'· Styrning '+esc(e.controller):''} · ${e.interval_months?e.interval_months+' mån':'Intervall ej valt'}</div></div><div class="toolbar"><button class="action secondary" data-edit-equipment="${esc(e.id)}">Redigera</button><button class="action secondary" data-replace-equipment="${esc(e.id)}">Byt ut</button><button class="action secondary" data-retire-equipment="${esc(e.id)}">Ta ur drift</button></div></div>`).join('')||'<p>Inga objekt ännu.</p>'}</div>`;
 }
 function renderEquipments(){let xs=table('equipment').filter(e=>e.active!==false);if(sys.filter)xs=xs.filter(e=>(e.number+' '+customerBy(e.customer_id)?.name+' '+e.manufacturer).toLowerCase().includes(sys.filter.toLowerCase()));return `<div class="toolbar"><input class="search" id="filter" placeholder="Sök portnummer, kund, fabrikat" value="${esc(sys.filter)}"><button class="action" data-action="new-equipment">+ Nytt objekt</button></div><div class="card">${xs.slice(0,300).map(e=>`<div class="listrow"><div><strong>${esc(e.number)}</strong> <span class="badge">${esc(templateTitle(e.template_id))}</span><div class="small muted">${esc(customerBy(e.customer_id)?.name)} · nästa ${esc(e.next_service_on||'Ej planerad')}</div></div><button class="action secondary" data-edit-equipment="${esc(e.id)}">Ändra</button></div>`).join('')||'<p>Inga serviceobjekt registrerade ännu.</p>'}</div>`;}
 function renderJobs(){return `<div class="toolbar"><div class="muted small">Ett uppdrag kan fortsätta flera dagar.</div><button class="action" data-action="new-job">+ Nytt serviceuppdrag</button></div><div class="card">${jobsFor().map(j=>`<div class="listrow"><div><strong>${esc(customerBy(j.customer_id)?.name)}</strong><div class="muted small">${esc(j.service_date)} · ${jobProgress(j.id).n} objekt</div></div><div class="right"><span class="badge ${j.status==='completed'?'good':'warn'}">${j.status==='completed'?'Avslutad':'Pågår'}</span><button class="action secondary" data-job="${esc(j.id)}">Öppna</button></div></div>`).join('')||'<p>Inga uppdrag finns ännu.</p>'}</div>`;}
@@ -237,7 +237,7 @@ function serviceTemplateOptions(selected){
   '<optgroup label="'+esc(heading)+'">'+options.filter(([id])=>known.has(id)).map(([id,label])=>
    '<option value="'+esc(id)+'" '+(id===selected?'selected':'')+'>'+esc(label)+'</option>').join('')+'</optgroup>').join('');
 }
-function equipmentForm(e){let cid=e?.customer_id||sys.selectedCustomer||table('customers')[0]?.id;return `<h2>${e?'Ändra':'Lägg till'} serviceobjekt</h2><form id="equipmentform"><input type="hidden" name="id" value="${esc(e?.id||'')}"><div class="field"><label>Kund *</label><select name="customer_id" required>${optionList(table('customers').map(c=>[c.id,c.name]),cid)}</select></div><div class="field"><label>Portnummer / objektnummer *</label><input name="number" required value="${esc(e?.number||'')}"></div><div class="field"><label>Porttyp / servicemall</label><select name="template_id" id="obj-template">${serviceTemplateOptions(e?.template_id)}</select></div><div class="field"><label>Brandportsutförande (om brandport)</label><select name="subtype">${optionList([['','Ej brandport / välj senare'],['Skjutbrandport','Skjutbrandport'],['Vikbrandport','Vikbrandport'],['Brandjalusi','Brandjalusi']],e?.subtype||'')}</select></div><div class="fieldgroup"><div class="field"><label>Fabrikat</label><input name="manufacturer" value="${esc(e?.manufacturer||'')}"></div><div class="field"><label>Modell</label><input name="model" value="${esc(e?.model||'')}"></div></div><div class="field"><label>Styrning</label><input name="controller" value="${esc(e?.controller||'')}" placeholder="t.ex. Hörmann A445"></div><div class="field"><label>Serienummer</label><input name="serial_no" value="${esc(e?.serial_no||'')}"></div><div class="fieldgroup"><div class="field"><label>Serviceintervall</label><select name="interval_months">${optionList([['','Välj intervall'],[3,'3 månader'],[6,'6 månader'],[12,'12 månader']].map(([a,b])=>[String(a),b]),String(e?.interval_months||customerBy(cid)?.service_interval_months||''))}</select></div><div class="field"><label>Nästa service</label><input type="date" name="next_service_on" value="${esc(e?.next_service_on||'')}"></div></div><div class="toolbar"><button type="button" class="action secondary" data-action="close-modal">Avbryt</button><button type="button" class="action" data-save-equipment="yes">Spara objekt</button></div></form>`;}
+function equipmentForm(e){let cid=e?.customer_id||sys.selectedCustomer||table('customers')[0]?.id;return `<h2>${e?'Ändra':'Lägg till'} serviceobjekt</h2><form id="equipmentform"><input type="hidden" name="replaces_id" value=""><input type="hidden" name="id" value="${esc(e?.id||'')}"><div class="field"><label>Kund *</label><select name="customer_id" required>${optionList(table('customers').map(c=>[c.id,c.name]),cid)}</select></div><div class="field"><label>Portnummer / objektnummer *</label><input name="number" required value="${esc(e?.number||'')}"></div><div class="field"><label>Porttyp / servicemall</label><select name="template_id" id="obj-template">${serviceTemplateOptions(e?.template_id)}</select></div><div class="field"><label>Brandportsutförande (om brandport)</label><select name="subtype">${optionList([['','Ej brandport / välj senare'],['Skjutbrandport','Skjutbrandport'],['Vikbrandport','Vikbrandport'],['Brandjalusi','Brandjalusi']],e?.subtype||'')}</select></div><div class="fieldgroup"><div class="field"><label>Fabrikat</label><input name="manufacturer" value="${esc(e?.manufacturer||'')}"></div><div class="field"><label>Modell</label><input name="model" value="${esc(e?.model||'')}"></div></div><div class="field"><label>Styrning</label><input name="controller" value="${esc(e?.controller||'')}" placeholder="t.ex. Hörmann A445"></div><div class="field"><label>Serienummer</label><input name="serial_no" value="${esc(e?.serial_no||'')}"></div><div class="fieldgroup"><div class="field"><label>Serviceintervall</label><select name="interval_months">${optionList([['','Välj intervall'],[3,'3 månader'],[6,'6 månader'],[12,'12 månader']].map(([a,b])=>[String(a),b]),String(e?.interval_months||customerBy(cid)?.service_interval_months||''))}</select></div><div class="field"><label>Nästa service</label><input type="date" name="next_service_on" value="${esc(e?.next_service_on||'')}"></div></div><div class="toolbar"><button type="button" class="action secondary" data-action="close-modal">Avbryt</button><button type="button" class="action" data-save-equipment="yes">Spara objekt</button></div></form>`;}
 function newJobForm(){return `<h2>Starta serviceuppdrag</h2><form id="jobform"><div class="field"><label>Välj kund</label><select name="customer_id" id="newjobcustomer" required>${optionList(table('customers').map(c=>[c.id,c.name]),sys.selectedCustomer||table('customers')[0]?.id)}</select></div><div class="field"><label>Servicedatum</label><input type="date" name="service_date" value="${new Date().toISOString().slice(0,10)}"></div><div class="notify">Alla kundens registrerade objekt kopplas till uppdraget. De kan kontrolleras över flera dagar. Kontrollresultat börjar alltid tomma.</div><div class="toolbar"><button type="button" class="action secondary" data-action="close-modal">Avbryt</button><button class="action" type="submit">Starta service</button></div></form>`;}
 function modal(html){sys.modal=html;render();}
 async function saveAnswer(jeid,itemid,answer,description=''){
@@ -477,7 +477,7 @@ async function handleSubmit(ev){const form=ev.target;if(!['loginform','customerf
 }
 // Event delegation works with all views and Safari touch interactions.
 document.addEventListener('click',async ev=>{
- const el=ev.target.closest('[data-interval-all],[data-action],[data-nav],[data-customer],[data-job],[data-edit-equipment],[data-resolve],[data-persist-issue],[data-toggle-group],[data-bulk],[data-answer]');if(!el)return;
+ const el=ev.target.closest('[data-interval-all],[data-action],[data-nav],[data-customer],[data-job],[data-edit-equipment],[data-replace-equipment],[data-retire-equipment],[data-resolve],[data-persist-issue],[data-toggle-group],[data-bulk],[data-answer]');if(!el)return;
  if(el.dataset.action==='close-modal'&&el.classList.contains('modalback')&&ev.target!==el)return;
  try{
   if(el.dataset.intervalAll){
@@ -491,6 +491,27 @@ document.addEventListener('click',async ev=>{
   if(el.dataset.customer){sys.selectedCustomer=el.dataset.customer;sys.customerDetailOpen=true;sys.view='customers';render();return;}
   if(el.dataset.job){sys.selectedJob=el.dataset.job;sys.selectedJE=null;sys.groupOpen={};sys.view='checklist';render();return;}
   if(el.dataset.editEquipment){modal(equipmentForm(equipBy(el.dataset.editEquipment)));return;}
+  if(el.dataset.retireEquipment){
+   const e=equipBy(el.dataset.retireEquipment);if(!e||e.active===false)return;
+   if(!confirm('Ta '+e.number+' ur drift? Objektet tas bort från aktiva portar, men all servicehistorik och tidigare brister behålls.'))return;
+   await updateRow('equipment',e.id,{active:false,next_service_on:null});
+   await refresh();sys.banner=e.number+' har tagits ur drift. Historiken finns kvar.';sys.alertClass='success';render();return;
+  }
+  if(el.dataset.replaceEquipment){
+   const old=equipBy(el.dataset.replaceEquipment);if(!old||old.active===false)return;
+   if(!confirm('Byt ut '+old.number+'? Först registreras den nya porten. Den gamla tas ur drift först när den nya har sparats.'))return;
+   const html=equipmentForm(null);
+   modal(html);
+   const form=document.querySelector('#equipmentform');
+   if(form){
+    form.elements.namedItem('replaces_id').value=old.id;
+    form.elements.namedItem('customer_id').value=old.customer_id;
+    form.elements.namedItem('number').value=old.number;
+    form.elements.namedItem('interval_months').value=String(old.interval_months||customerBy(old.customer_id)?.service_interval_months||'');
+    form.querySelector('h2')?.remove();
+   }
+   return;
+  }
   if(el.dataset.persistIssue){
    const issue=first(table('issues'),x=>x.id===el.dataset.persistIssue),job=jobBy(el.dataset.checkJob);
    if(!issue||!job||job.status!=='draft')return;
@@ -608,6 +629,18 @@ document.addEventListener('click',async function saveEquipmentDirect(event){
    else equipment=(await insertRows('equipment',[{org_id:org(),...record}]))[0];
   }
   if(!equipment?.id)throw Error('Objektet kunde inte bekräftas av databasen.');
+  if(value('replaces_id')){
+   // The replacement has already been created; retain old equipment and all historical jobs.
+   try{
+    await updateRow('equipment',value('replaces_id'),{active:false,next_service_on:null});
+    const retired=equipBy(value('replaces_id'));if(retired)Object.assign(retired,{active:false,next_service_on:null});
+   }catch(err){
+    show('Nya objektet sparades, men det gamla kunde inte tas ur drift: '+err.message,true);
+    console.error('Replacement retirement failed',err);
+    button.disabled=false;button.textContent='Spara objekt';
+    return;
+   }
+  }
   const existing=table('equipment').findIndex(x=>x.id===equipment.id);
   if(existing>=0)table('equipment')[existing]=equipment;else table('equipment').push(equipment);
   sys.selectedCustomer=customerId;sys.customerDetailOpen=true;sys.view='customers';sys.filter='';
