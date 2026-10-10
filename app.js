@@ -205,7 +205,7 @@ function renderReminders(){const now=new Date().toISOString().slice(0,10),to=new
  return `<div class="notify">Servicepåminnelserna ska gå till ansvarig montör, inte till kunden. Här visas objekt inom 10 dagar och försenade serviceobjekt. Automatiska påminnelsemejl aktiveras vid produktionssättning.</div><div class="card">${rs.map(e=>`<div class="listrow"><div><strong>${esc(customerBy(e.customer_id)?.name)} – ${esc(e.number)}</strong><div class="muted small">Nästa service ${esc(e.next_service_on)} · ${e.interval_months} månader</div></div><span class="badge ${e.next_service_on<now?'bad':'warn'}">${e.next_service_on<now?'Försenad':'Inom 10 dagar'}</span></div>`).join('')||'<p>Inga aktuella servicepåminnelser.</p>'}</div>`;
 }
 function optionList(data,current){return data.map(([value,label])=>`<option value="${esc(value)}" ${value===current?'selected':''}>${esc(label)}</option>`).join('')}
-function customerForm(c){const isEdit=!!c;return `<h2>${isEdit?'Ändra kund':'Ny kund'}</h2><form id="customerform"><input type="hidden" name="id" value="${esc(c?.id||'')}"><div class="field"><label>Kundtyp</label><select name="customer_type">${optionList(['Företag','BRF','Samfällighet'].map(x=>[x,x]),c?.customer_type||'Företag')}</select></div><div class="field"><label>Namn *</label><input name="name" required value="${esc(c?.name||'')}"></div><div class="field"><label>Serviceintervall för alla kundens portar</label><select name="service_interval_months" required>${optionList([['','Välj intervall'],['3','3 månader'],['6','6 månader'],['12','12 månader']],String(c?.service_interval_months||''))}</select><p class="small muted">Gäller alla portar hos kunden och ärvs av nya portar.</p></div><div class="field"><label>Adress</label><input name="address" value="${esc(c?.address||'')}"></div><div class="fieldgroup"><div class="field"><label>Kontaktperson</label><input name="contact" value="${esc(c?.contact||'')}"></div><div class="field"><label>Telefon</label><input name="phone" value="${esc(c?.phone||'')}"></div></div><div class="field"><label>E-post för serviceprotokoll</label><input type="email" name="email" value="${esc(c?.email||'')}"></div><div class="toolbar"><button type="button" class="action secondary" data-action="close-modal">Avbryt</button><button class="action" type="submit">Spara kund</button></div></form>`;}
+function customerForm(c){const isEdit=!!c;return `<h2>${isEdit?'Ändra kund':'Ny kund'}</h2><form id="customerform"><input type="hidden" name="id" value="${esc(c?.id||'')}"><div class="field"><label>Kundtyp</label><select name="customer_type">${optionList(['Företag','BRF','Samfällighet'].map(x=>[x,x]),c?.customer_type||'Företag')}</select></div><div class="field"><label>Namn *</label><input name="name" required value="${esc(c?.name||'')}"></div><div class="field"><label>Serviceintervall för alla kundens portar</label><select name="service_interval_months" required>${optionList([['','Välj intervall'],['3','3 månader'],['6','6 månader'],['12','12 månader']],String(c?.service_interval_months||''))}</select><p class="small muted">Gäller alla portar hos kunden och ärvs av nya portar.</p></div><div class="field"><label>Adress</label><input name="address" value="${esc(c?.address||'')}"></div><div class="fieldgroup"><div class="field"><label>Kontaktperson</label><input name="contact" value="${esc(c?.contact||'')}"></div><div class="field"><label>Telefon</label><input name="phone" value="${esc(c?.phone||'')}"></div></div><div class="field"><label>E-post för serviceprotokoll</label><input type="email" name="email" value="${esc(c?.email||'')}"></div><div class="toolbar"><button type="button" class="action secondary" data-action="close-modal">Avbryt</button><button class="action" type="button" data-save-customer="yes">Spara kund</button></div></form>`;}
 function serviceTemplateOptions(selected){
  const groups=[
   ['Industriservice',[
@@ -468,6 +468,27 @@ document.addEventListener('click',async ev=>{
   if(el.dataset.action)await handleAction(el.dataset.action,el);
  }catch(e){notify('Ett fel uppstod: '+e.message,true)}
 });
+document.addEventListener('click',async function saveCustomerFromTap(event){
+ const button=event.target.closest('[data-save-customer]');
+ if(!button)return;
+ event.preventDefault();
+ event.stopPropagation();
+ const form=button.closest('form');
+ if(!form)return;
+ if(!form.reportValidity())return;
+ button.disabled=true;
+ button.textContent='Sparar kund...';
+ try{await handleSubmit({target:form,preventDefault(){}});}
+ catch(err){
+  let area=form.querySelector('.form-save-error');
+  if(!area){area=document.createElement('div');area.className='form-save-error';form.prepend(area);}
+  area.textContent='Sparfel: '+(err?.message||String(err));
+  area.style.cssText='padding:15px;background:#fff0f0;color:#a00;font-weight:bold';
+ }finally{
+  const still=document.querySelector('#customerform [data-save-customer]');
+  if(still){still.disabled=false;still.textContent='Spara kund';}
+ }
+},true);
 document.addEventListener('submit',handleSubmit);
 document.addEventListener('change',async ev=>{if(ev.target.dataset.intervalObject){
  const n=Number(ev.target.value);if(![3,6,12].includes(n))return;
