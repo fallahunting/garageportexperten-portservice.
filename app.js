@@ -46,7 +46,7 @@ const sample=()=>{
   customers:[{id:customer,org_id:org,customer_type:'Företag',name:'Palladium Fastigheter AB',
     address:'Skäggebyvägen 13, 612 44 Finspång',email:'Info@palladiumfastigheter.se',
     contact:'Martin O',phone:'0705297071'}],
-  equipment,service_jobs:[],job_equipment:[],inspection_answers:[],issues:[]};
+  equipment,service_jobs:[],job_equipment:[],inspection_answers:[],issues:[],issue_service_checks:[]};
 };
 function persist(){if(!live)localStorage.setItem(DEMOKEY,JSON.stringify(sys.tables));}
 function notify(message,bad=false){sys.banner=message;sys.alertClass=bad?'error':'success';render();}
@@ -120,7 +120,7 @@ async function updateRow(table,rowid,patch){
  const {data,error}=await client.from(table).update(patch).eq('id',rowid).select('*').single();if(error)throw error;return data;
 }
 async function refresh(){
- const names=['organizations','profiles','customers','equipment','service_jobs','job_equipment','inspection_answers','issues'];
+ const names=['organizations','profiles','customers','equipment','service_jobs','job_equipment','inspection_answers','issues','issue_service_checks'];
  const rows=await Promise.all(names.map(t=>getRows(t,{})));
  names.forEach((name,i)=>sys.tables[name]=rows[i]);
  if(publicTest){
@@ -192,7 +192,7 @@ function renderChecklist(){const job=jobBy(sys.selectedJob);if(!job)return `<div
  return `<div class="card"><div class="toolbar"><div><h2>${esc(customer?.name)}</h2><div class="muted small">${esc(job.service_date)} · ${esc(job.status==='completed'?'Avslutad service':'Pågående service')}</div></div><button class="action secondary" data-nav="jobs">Alla uppdrag</button></div><div class="row small"><span>${p.done} / ${p.total} kontrollpunkter</span><span>${p.brists} registrerade brister</span></div><div class="progress" style="margin:9px 0 15px"><div style="width:${p.total?100*p.done/p.total:0}%"></div></div><div class="field"><label for="equips">Välj serviceobjekt (${jes.length} st)</label><select id="equips">${jes.map((j,i)=>{const e=equipBy(j.equipment_id);return`<option value="${esc(j.id)}" ${j.id===sys.selectedJE?'selected':''}>${esc(e?.number||'Okänt objekt')} – ${esc(labelStatus(j.id))}</option>`}).join('')}</select></div>${eq?renderIndividual(je,eq,job):'<p>Inga objekt kopplade.</p>'}</div>${intervalPanel(job)}${job.status==='draft'?`<div class="card"><div class="toolbar"><div><h2>Färdigställ kundens service</h2><p class="small muted">Alla obligatoriska kontroller och bristbeskrivningar måste vara klara.</p></div><button class="action yellow" data-action="finalize">Avsluta service</button></div></div>`:`<div class="card"><h2>Service avslutad</h2><div class="toolbar"><button class="action" data-action="pdf">Hämta gemensamt PDF-protokoll</button>${live&&sys.mailReady&&job.email_status!=='sent'?'<button class="action yellow" data-action="resend">Skicka protokoll</button>':''}</div><p class="small muted">E-post: ${esc(job.email_status==='sent'?'Skickat till kund och Garageportexperten':job.email_status==='failed'?'Utskick misslyckades':'Ännu inte skickat')}</p></div>`}`;
 }
 function renderIndividual(je,e,job){const pts=itemsFor(e);const cats=[...new Set(pts.map(x=>x.group))];const done=pts.filter(p=>{const a=ansFor(je.id,p.id);return a&&(a.answer!=='Brist'||a.description.trim())}).length;
- const open=issuesFor(e.id),openHtml=open.length?`<div class="warning"><strong><span aria-hidden="true">⚠️ </span>Kontrollera tidigare brister (${open.length})</strong><p class="small">Dessa brister är fortfarande öppna från tidigare service. Kontrollera på nytt att de kvarstår eller markera Åtgärdad och ange vad som gjorts.</p>${open.map(i=>`<div class="listrow"><div class="small">${esc(i.description)}</div>${job.status==='draft'?`<button class="action secondary" data-resolve="${esc(i.id)}">Åtgärdad</button>`:''}</div>`).join('')}</div>`:'';
+ const open=issuesFor(e.id),openHtml=open.length?`<div class="warning"><strong><span aria-hidden="true">⚠️ </span>Kontrollera tidigare brister (${open.length})</strong><p class="small">Välj Åtgärdad eller Kvarstående för varje tidigare brist. Kvarstående brister följer med till nästa service.</p>${open.map(i=>{const check=first(table('issue_service_checks'),x=>x.issue_id===i.id&&x.job_id===job.id);return `<div class="listrow" style="align-items:flex-start"><div><div class="small">${esc(i.description)}</div>${check?.decision==='kvarstar'?`<div class="small" style="color:#805b00;font-weight:700">✓ Kontrollerad – kvarstående${check.comment?' · '+esc(check.comment):''}</div>`:''}</div>${job.status==='draft'?`<div class="toolbar"><button class="action secondary" data-resolve="${esc(i.id)}">Åtgärdad</button><button class="action secondary" data-persist-issue="${esc(i.id)}" data-check-job="${esc(job.id)}">${check?.decision==='kvarstar'?'✓ Kvarstående':'Kvarstående'}</button></div>`:''}</div>`}).join('')}</div>`:'';
  return `<div class="row" style="margin:10px 0 13px"><div><strong>${esc(e.number)}</strong><div class="small muted">${esc(templateTitle(e.template_id))} · ${esc(e.manufacturer||'')} ${esc(e.model||'')} ${e.controller?'· Styrning '+esc(e.controller):''}</div></div><span class="badge ${done===pts.length?'good':'warn'}">${done} / ${pts.length} klara</span></div>${openHtml}${cats.map((cat,idx)=>renderGroup(je,e,job,cat,idx,pts.filter(p=>p.group===cat))).join('')}<div class="toolbar"><button class="action secondary" data-action="prev-equipment">← Föregående</button><button class="action" data-action="next-equipment">Nästa objekt →</button></div>`;
 }
 function renderGroup(je,e,job,cat,idx,pts){const key=je.id+'|'+cat;const expanded=sys.groupOpen[key]??(idx===0);const completed=pts.filter(p=>{const a=ansFor(je.id,p.id);return a&&(a.answer!=='Brist'||a.description.trim())}).length;
@@ -477,7 +477,7 @@ async function handleSubmit(ev){const form=ev.target;if(!['loginform','customerf
 }
 // Event delegation works with all views and Safari touch interactions.
 document.addEventListener('click',async ev=>{
- const el=ev.target.closest('[data-interval-all],[data-action],[data-nav],[data-customer],[data-job],[data-edit-equipment],[data-resolve],[data-toggle-group],[data-bulk],[data-answer]');if(!el)return;
+ const el=ev.target.closest('[data-interval-all],[data-action],[data-nav],[data-customer],[data-job],[data-edit-equipment],[data-resolve],[data-persist-issue],[data-toggle-group],[data-bulk],[data-answer]');if(!el)return;
  if(el.dataset.action==='close-modal'&&el.classList.contains('modalback')&&ev.target!==el)return;
  try{
   if(el.dataset.intervalAll){
@@ -491,9 +491,27 @@ document.addEventListener('click',async ev=>{
   if(el.dataset.customer){sys.selectedCustomer=el.dataset.customer;sys.customerDetailOpen=true;sys.view='customers';render();return;}
   if(el.dataset.job){sys.selectedJob=el.dataset.job;sys.selectedJE=null;sys.groupOpen={};sys.view='checklist';render();return;}
   if(el.dataset.editEquipment){modal(equipmentForm(equipBy(el.dataset.editEquipment)));return;}
+  if(el.dataset.persistIssue){
+   const issue=first(table('issues'),x=>x.id===el.dataset.persistIssue),job=jobBy(el.dataset.checkJob);
+   if(!issue||!job||job.status!=='draft')return;
+   const comment=prompt('Kommentar om kvarstående brist (valfritt):','');
+   if(comment===null)return;
+   const existing=first(table('issue_service_checks'),x=>x.issue_id===issue.id&&x.job_id===job.id);
+   const record={org_id:org(),issue_id:issue.id,job_id:job.id,decision:'kvarstar',comment:comment.trim(),checked_by:sys.user.id,checked_at:new Date().toISOString()};
+   if(existing)await updateRow('issue_service_checks',existing.id,record);
+   else await insertRows('issue_service_checks',[record]);
+   await refresh();sys.banner='Brist kontrollerad och markerad som kvarstående.';sys.alertClass='success';render();return;
+  }
   if(el.dataset.resolve){const description=prompt('Beskriv hur bristen har åtgärdats:');if(!description)return;if(description.trim().length<3){notify('Beskriv åtgärden mer noggrant.',true);return;}
    if(live&&!publicTest){const {error}=await client.rpc('resolve_issue',{p_issue:el.dataset.resolve,p_resolution:description});if(error)throw error;await refresh();}
-   else if(publicTest){await updateRow('issues',el.dataset.resolve,{state:'resolved',resolution:description,resolved_by:sys.user.id,resolved_at:new Date().toISOString()});await refresh();}
+   else if(publicTest){
+    const current=jobBy(sys.selectedJob);
+    if(current?.status==='draft'){
+     const existing=first(table('issue_service_checks'),x=>x.issue_id===el.dataset.resolve&&x.job_id===current.id);
+     const record={org_id:org(),issue_id:el.dataset.resolve,job_id:current.id,decision:'atgardad',comment:description,checked_by:sys.user.id,checked_at:new Date().toISOString()};
+     if(existing)await updateRow('issue_service_checks',existing.id,record);else await insertRows('issue_service_checks',[record]);
+    }
+    await updateRow('issues',el.dataset.resolve,{state:'resolved',resolution:description,resolved_by:sys.user.id,resolved_at:new Date().toISOString()});await refresh();}
    else {const issue=first(table('issues'),x=>x.id===el.dataset.resolve);Object.assign(issue,{state:'resolved',resolution:description,resolved_by:sys.user.id,resolved_at:new Date().toISOString()});persist();render();}return;}
   if(el.dataset.toggleGroup){sys.groupOpen[el.dataset.toggleGroup]=!(sys.groupOpen[el.dataset.toggleGroup]??(el.dataset.toggleGroup.endsWith(itemsFor(equipBy(jeBy(sys.selectedJE)?.equipment_id))[0]?.group)));render();return;}
   if(el.dataset.bulk){await onBulk(el.dataset.bulk);return;}
