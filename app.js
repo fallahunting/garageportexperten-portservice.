@@ -313,9 +313,16 @@ async function handleSubmit(ev){const form=ev.target;if(!['loginform','customerf
 }
 // Event delegation works with all views and Safari touch interactions.
 document.addEventListener('click',async ev=>{
- const el=ev.target.closest('[data-action],[data-nav],[data-customer],[data-job],[data-edit-equipment],[data-resolve],[data-toggle-group],[data-bulk],[data-answer]');if(!el)return;
+ const el=ev.target.closest('[data-interval-all],[data-action],[data-nav],[data-customer],[data-job],[data-edit-equipment],[data-resolve],[data-toggle-group],[data-bulk],[data-answer]');if(!el)return;
  if(el.dataset.action==='close-modal'&&el.classList.contains('modalback')&&ev.target!==el)return;
  try{
+  if(el.dataset.intervalAll){
+   const j=jobBy(sys.selectedJob);if(!j||j.status!=='draft')return;
+   const n=Number(el.dataset.intervalAll),es=jesFor(j.id).map(x=>equipBy(x.equipment_id)).filter(Boolean);
+   if(!confirm('Sätt '+n+' månader på '+es.length+' serviceobjekt?'))return;
+   for(const e of es)await updateRow('equipment',e.id,{interval_months:n,responsible_user:e.responsible_user||sys.user.id});
+   await refresh();notify('Serviceintervall sparade för alla objekt.');return;
+  }
   if(el.dataset.nav){sys.view=el.dataset.nav;sys.banner='';sys.filter='';render();return;}
   if(el.dataset.customer){sys.selectedCustomer=el.dataset.customer;sys.view='customers';render();return;}
   if(el.dataset.job){sys.selectedJob=el.dataset.job;sys.selectedJE=null;sys.groupOpen={};sys.view='checklist';render();return;}
@@ -331,7 +338,10 @@ document.addEventListener('click',async ev=>{
  }catch(e){notify('Ett fel uppstod: '+e.message,true)}
 });
 document.addEventListener('submit',handleSubmit);
-document.addEventListener('change',ev=>{if(ev.target.id==='equips'){sys.selectedJE=ev.target.value;sys.groupOpen={};render()} if((ev.target.id==='active-technician'||ev.target.id==='demo-technician')&&(!live||publicTest)){const p=first(table('profiles'),p=>p.user_id===ev.target.value&&p.active!==false);if(p){sys.profile=p;sys.user={id:p.user_id,email:''};localStorage.setItem(TECHKEY,p.user_id);sys.banner='Aktiv montör: '+p.display_name+'. Nya kontroller registreras på denna montör.';sys.alertClass='success';render()}}});
+document.addEventListener('change',async ev=>{if(ev.target.dataset.intervalObject){
+ const n=Number(ev.target.value);if(![3,6,12].includes(n))return;
+ try{const e=equipBy(ev.target.dataset.intervalObject);await updateRow('equipment',e.id,{interval_months:n,responsible_user:e.responsible_user||sys.user.id});await refresh();notify('Serviceintervall sparat.')}catch(err){notify(err.message,true)}return;
+ }if(ev.target.id==='equips'){sys.selectedJE=ev.target.value;sys.groupOpen={};render()} if((ev.target.id==='active-technician'||ev.target.id==='demo-technician')&&(!live||publicTest)){const p=first(table('profiles'),p=>p.user_id===ev.target.value&&p.active!==false);if(p){sys.profile=p;sys.user={id:p.user_id,email:''};localStorage.setItem(TECHKEY,p.user_id);sys.banner='Aktiv montör: '+p.display_name+'. Nya kontroller registreras på denna montör.';sys.alertClass='success';render()}}});
 document.addEventListener('input',ev=>{if(ev.target.id==='filter'){const start=ev.target.selectionStart;sys.filter=ev.target.value;render();const inp=$('#filter');inp?.focus();inp?.setSelectionRange(start,start)}});
 document.addEventListener('focusout',async ev=>{
  const text=ev.target;if(!text.matches('[data-description]'))return;
