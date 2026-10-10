@@ -493,24 +493,24 @@ document.addEventListener('click',async ev=>{
   if(el.dataset.startUpcoming){
    const eq=equipBy(el.dataset.startUpcoming);
    if(!eq||eq.active===false){notify('Serviceobjektet är inte längre aktivt.',true);return;}
-   const assigned=table('job_equipment').filter(je=>je.equipment_id===eq.id);
-   const existing=assigned.map(je=>jobBy(je.job_id)).find(j=>j&&j.status==='draft');
-   if(existing){
-    sys.selectedJob=existing.id;
-    const match=assigned.find(je=>je.job_id===existing.id);
-    sys.selectedJE=match?.id||null;
-    sys.groupOpen={};sys.view='checklist';render();return;
-   }
    const customer=customerBy(eq.customer_id);
    if(!customer){notify('Kunden saknas för detta serviceobjekt.',true);return;}
-   if(!confirm('Starta service för '+customer.name+' – '+eq.number+'? Endast detta objekt ingår.'))return;
+   const activeEquipment=equipmentFor(customer.id).filter(e=>e.active!==false);
+   if(!activeEquipment.length){notify('Kunden har inga aktiva serviceobjekt.',true);return;}
+   const existing=table('service_jobs').find(j=>j.customer_id===customer.id&&j.status==='draft');
+   if(existing){
+    // An already-started service for this customer is the same visit.
+    sys.selectedJob=existing.id;sys.selectedJE=jesFor(existing.id)[0]?.id||null;
+    sys.groupOpen={};sys.view='checklist';render();return;
+   }
+   if(!confirm('Starta service för '+customer.name+' med alla '+activeEquipment.length+' aktiva objekt?'))return;
    const date=new Date().toISOString().slice(0,10);
-   const [job]=await insertRows('service_jobs',[{org_id:org(),customer_id:eq.customer_id,service_date:date,started_by:sys.user.id,status:'draft'}]);
+   const [job]=await insertRows('service_jobs',[{org_id:org(),customer_id:customer.id,service_date:date,started_by:sys.user.id,status:'draft'}]);
    if(!job?.id)throw Error('Serviceuppdraget kunde inte skapas.');
-   const [link]=await insertRows('job_equipment',[{org_id:org(),job_id:job.id,equipment_id:eq.id}]);
-   if(!link?.id)throw Error('Kopplingen till serviceobjektet kunde inte sparas. Uppdraget finns kvar för felsökning.');
-   await refresh();
-   sys.selectedJob=job.id;sys.selectedJE=link.id;sys.groupOpen={};sys.view='checklist';render();return;
+   const links=await insertRows('job_equipment',activeEquipment.map(e=>({org_id:org(),job_id:job.id,equipment_id:e.id})));
+   if(links.length!==activeEquipment.length)throw Error('Alla serviceobjekt kunde inte kopplas till uppdraget.');
+   await refresh();sys.selectedJob=job.id;sys.selectedJE=links[0]?.id||null;
+   sys.groupOpen={};sys.view='checklist';render();return;
   }
   if(el.dataset.editEquipment){modal(equipmentForm(equipBy(el.dataset.editEquipment)));return;}
   if(el.dataset.retireEquipment){
