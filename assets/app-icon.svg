@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+<rect width="512" height="512" rx="84" fill="#ffeb41"/>
+<g fill="#005b98">
+<path d="M146 132 H366 L380 168 H132 Z"/>
+<path d="M132 184 H380 V229 H132 Z"/>
+<path d="M132 245 H380 V290 H132 Z"/>
+<path d="M132 306 H380 V351 H132 Z"/>
+</g><text x="256" y="430" text-anchor="middle" fill="#005b98" font-family="Arial,sans-serif" font-weight="bold" font-size="53">GPE</text></svg>
