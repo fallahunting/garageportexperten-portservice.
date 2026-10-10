@@ -412,7 +412,20 @@ async function handleSubmit(ev){const form=ev.target;if(!['loginform','customerf
    if(![3,6,12].includes(Number(v('service_interval_months'))))throw Error('Välj 3, 6 eller 12 månaders serviceintervall för kunden.');
    const rec={customer_type:v('customer_type'),name:v('name'),address:v('address'),contact:v('contact'),phone:v('phone'),email:v('email'),service_interval_months:Number(v('service_interval_months'))};
    if(v('id')){await updateRow('customers',v('id'),rec);for(const e of equipmentFor(v('id')))await updateRow('equipment',e.id,{interval_months:rec.service_interval_months});}else{
-    const added=await insertRows('customers',[{org_id:org(),...rec}]);
+    let added;
+    if(live){
+     const chosenId=form.dataset.newCustomerId||(form.dataset.newCustomerId=id());
+     const controller=new AbortController();
+     const timeout=setTimeout(()=>controller.abort(),15000);
+     try{
+      const result=await client.from('customers').upsert([{id:chosenId,org_id:org(),...rec}],{onConflict:'id'}).select('*').abortSignal(controller.signal);
+      if(result.error)throw result.error;
+      added=result.data;
+     }catch(err){
+      if(controller.signal.aborted)throw Error('Databasen svarade inte inom 15 sekunder. Kontrollera uppkopplingen och försök igen.');
+      throw err;
+     }finally{clearTimeout(timeout);}
+    }else{added=await insertRows('customers',[{org_id:org(),...rec}]);}
     if(!added?.[0]?.id)throw Error('Databasen bekräftade inte att kunden skapades.');
     sys.selectedCustomer=added[0].id;
    }
