@@ -413,7 +413,14 @@ async function handleSubmit(ev){const form=ev.target;if(!['loginform','customerf
    await insertRows('job_equipment',es.map(e=>({org_id:org(),job_id:job.id,equipment_id:e.id})));
    sys.modal=null;sys.selectedJob=job.id;sys.selectedJE=null;sys.view='checklist';await refresh();return;
   }
- }catch(e){notify('Kunde inte spara: '+e.message,true)}
+ }catch(e){
+  console.error('Sparfel i formulär',form.id,e);
+  const msg='Kunde inte spara: '+(e?.message||String(e))+(e?.code?' (felkod '+e.code+')':'');
+  let area=form.querySelector('.form-save-error');
+  if(!area){area=document.createElement('div');area.className='form-save-error warning';area.setAttribute('role','alert');form.prepend(area);}
+  area.textContent=msg;
+  area.scrollIntoView({behavior:'smooth',block:'nearest'});
+ }
 }
 // Event delegation works with all views and Safari touch interactions.
 document.addEventListener('click',async ev=>{
