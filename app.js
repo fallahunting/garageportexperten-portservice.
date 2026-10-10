@@ -175,7 +175,7 @@ function renderHome(){
  const reminder30=new Date(Date.now()+30*86400000).toISOString().slice(0,10);
  const upcoming=table('equipment').filter(e=>e.active&&e.next_service_on&&e.next_service_on<=reminder30&&(sys.profile.role==='admin'||!e.responsible_user||e.responsible_user===sys.user.id)).sort((a,b)=>a.next_service_on.localeCompare(b.next_service_on));
  const pending=jobsFor().filter(j=>j.status==='draft');
- return `<div class="grid"><div class="card"><h3>Service inom 10 dagar</h3><div class="big-num">${due.length}</div><div class="muted small">Tilldelade objekt inklusive försenade</div></div></div><div class="card"><div class="toolbar"><h2>Pågående serviceuppdrag</h2><button data-action="new-job" class="action">+ Ny service</button></div>${pending.length?pending.slice(0,20).map(j=>`<div class="listrow"><div><strong>${esc(customerBy(j.customer_id)?.name)}</strong><div class="muted small">${esc(j.service_date)} · ${jobProgress(j.id).n} objekt</div></div><button class="action secondary" data-job="${esc(j.id)}">Fortsätt</button></div>`).join(''):'<p class="muted">Inga pågående serviceuppdrag.</p>'}</div><div class="card"><h2>Kommande påminnelser – 30 dagar</h2>${upcoming.length?upcoming.slice(0,30).map(e=>`<div class="listrow"><div><strong>${esc(customerBy(e.customer_id)?.name)} – ${esc(e.number)}</strong><div class="muted small">Nästa service ${esc(e.next_service_on)}</div></div><span class="badge ${e.next_service_on<today?'bad':'warn'}">${e.next_service_on<today?'Försenad':'Snart'}</span></div>`).join(''):'<p class="muted">Inga objekt att påminna om de närmaste 30 dagarna.</p>'}</div>`;
+ return `<div class="grid"><div class="card"><h3>Service inom 10 dagar</h3><div class="big-num">${due.length}</div><div class="muted small">Tilldelade objekt inklusive försenade</div></div></div><div class="card"><div class="toolbar"><h2>Pågående serviceuppdrag</h2><button data-action="new-job" class="action">+ Ny service</button></div>${pending.length?pending.slice(0,20).map(j=>`<div class="listrow"><div><strong>${esc(customerBy(j.customer_id)?.name)}</strong><div class="muted small">${esc(j.service_date)} · ${jobProgress(j.id).n} objekt</div></div><button class="action secondary" data-job="${esc(j.id)}">Fortsätt</button></div>`).join(''):'<p class="muted">Inga pågående serviceuppdrag.</p>'}</div><div class="card"><h2>Kommande påminnelser – 30 dagar</h2>${upcoming.length?upcoming.slice(0,30).map(e=>`<div class="listrow"><div><strong>${esc(customerBy(e.customer_id)?.name)} – ${esc(e.number)}</strong><div class="muted small">Nästa service ${esc(e.next_service_on)}</div></div><button class="action secondary" data-start-upcoming="${esc(e.id)}">Öppna service</button></div>`).join(''):'<p class="muted">Inga objekt att påminna om de närmaste 30 dagarna.</p>'}</div>`;
 }
 function renderCustomers(){let list=table('customers');if(sys.filter)list=list.filter(c=>(c.name+' '+c.address).toLowerCase().includes(sys.filter.toLowerCase()));
  return `<div class="toolbar"><input class="search" id="filter" placeholder="Sök kund eller adress" value="${esc(sys.filter)}" aria-label="Sök kund"><button class="action" data-action="new-customer">+ Ny kund</button></div><div class="card">${list.length?list.sort((a,b)=>a.name.localeCompare(b.name,'sv')).map(c=>`<div class="listrow"><div><strong>${esc(c.name)}</strong><div class="small muted">${esc(c.customer_type)} · ${esc(c.address)} · ${equipmentFor(c.id).length} objekt</div><div class="small muted">${esc(c.email)}</div></div><button class="action secondary" data-customer="${esc(c.id)}">Öppna</button></div>`).join(''):'<p>Ingen kund hittades.</p>'}</div>${sys.selectedCustomer&&sys.customerDetailOpen?renderCustomerDetail():''}`;
@@ -477,7 +477,7 @@ async function handleSubmit(ev){const form=ev.target;if(!['loginform','customerf
 }
 // Event delegation works with all views and Safari touch interactions.
 document.addEventListener('click',async ev=>{
- const el=ev.target.closest('[data-interval-all],[data-action],[data-nav],[data-customer],[data-job],[data-edit-equipment],[data-replace-equipment],[data-retire-equipment],[data-resolve],[data-persist-issue],[data-toggle-group],[data-bulk],[data-answer]');if(!el)return;
+ const el=ev.target.closest('[data-interval-all],[data-action],[data-nav],[data-customer],[data-job],[data-edit-equipment],[data-replace-equipment],[data-retire-equipment],[data-start-upcoming],[data-resolve],[data-persist-issue],[data-toggle-group],[data-bulk],[data-answer]');if(!el)return;
  if(el.dataset.action==='close-modal'&&el.classList.contains('modalback')&&ev.target!==el)return;
  try{
   if(el.dataset.intervalAll){
@@ -490,6 +490,28 @@ document.addEventListener('click',async ev=>{
   if(el.dataset.nav){sys.view=el.dataset.nav;if(sys.view==='customers')sys.customerDetailOpen=false;sys.banner='';sys.filter='';render();return;}
   if(el.dataset.customer){sys.selectedCustomer=el.dataset.customer;sys.customerDetailOpen=true;sys.view='customers';render();return;}
   if(el.dataset.job){sys.selectedJob=el.dataset.job;sys.selectedJE=null;sys.groupOpen={};sys.view='checklist';render();return;}
+  if(el.dataset.startUpcoming){
+   const eq=equipBy(el.dataset.startUpcoming);
+   if(!eq||eq.active===false){notify('Serviceobjektet är inte längre aktivt.',true);return;}
+   const assigned=table('job_equipment').filter(je=>je.equipment_id===eq.id);
+   const existing=assigned.map(je=>jobBy(je.job_id)).find(j=>j&&j.status==='draft');
+   if(existing){
+    sys.selectedJob=existing.id;
+    const match=assigned.find(je=>je.job_id===existing.id);
+    sys.selectedJE=match?.id||null;
+    sys.groupOpen={};sys.view='checklist';render();return;
+   }
+   const customer=customerBy(eq.customer_id);
+   if(!customer){notify('Kunden saknas för detta serviceobjekt.',true);return;}
+   if(!confirm('Starta service för '+customer.name+' – '+eq.number+'? Endast detta objekt ingår.'))return;
+   const date=new Date().toISOString().slice(0,10);
+   const [job]=await insertRows('service_jobs',[{org_id:org(),customer_id:eq.customer_id,service_date:date,started_by:sys.user.id,status:'draft'}]);
+   if(!job?.id)throw Error('Serviceuppdraget kunde inte skapas.');
+   const [link]=await insertRows('job_equipment',[{org_id:org(),job_id:job.id,equipment_id:eq.id}]);
+   if(!link?.id)throw Error('Kopplingen till serviceobjektet kunde inte sparas. Uppdraget finns kvar för felsökning.');
+   await refresh();
+   sys.selectedJob=job.id;sys.selectedJE=link.id;sys.groupOpen={};sys.view='checklist';render();return;
+  }
   if(el.dataset.editEquipment){modal(equipmentForm(equipBy(el.dataset.editEquipment)));return;}
   if(el.dataset.retireEquipment){
    const e=equipBy(el.dataset.retireEquipment);if(!e||e.active===false)return;
