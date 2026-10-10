@@ -274,10 +274,20 @@ function pdfLines(jobId){const j=jobBy(jobId),c=customerBy(j.customer_id),jes=je
  for(const je of jes){const e=equipBy(je.equipment_id),a=answersFor(je.id),failed=a.filter(x=>x.answer==='Brist');if(failed.length)bad.push({e,failed});else good.push(e);details.push({e,points:itemsFor(e),answers:a});}
  return {job:j,customer:c,good,bad,details,all:jes.length};
 }
+function protocolCategories(detail){
+ const groups=[...new Set(detail.points.map(q=>q.group))];
+ return groups.map(name=>{
+  const questions=detail.points.filter(q=>q.group===name);
+  const answers=questions.map(q=>({q,a:first(detail.answers,x=>x.item_id===q.id)}));
+  const faults=answers.filter(x=>x.a?.answer==='Brist');
+  const pending=answers.some(x=>!x.a?.answer);
+  return {name,status:faults.length?'Brist':pending?'Ej kontrollerad':'OK',faults};
+ });
+}
 function buildPrint(jobId){const p=pdfLines(jobId),line=(a)=>a.map(x=>esc(x.number)).join(', ');
  let html=`<div class="printpage"><h1>GARAGEPORTEXPERTEN – SERVICEPROTOKOLL</h1><p><strong>${esc(p.customer.name)}</strong><br>${esc(p.customer.address)}<br>Service ${esc(p.job.service_date)} · ${p.all} objekt · montör ${esc(first(table('profiles'),x=>x.user_id===p.job.finished_by)?.display_name||sys.profile.display_name)}</p><h2>Utan anmärkning (${p.good.length})</h2><p>${line(p.good)||'Inga'}</p><h2>Objekt med brister (${p.bad.length})</h2>`;
  for(const z of p.bad){html+=`<section><h3>${esc(z.e.number)}</h3>`;for(const b of z.failed){const q=first(items,x=>x.id===b.item_id);html+=`<div class="item bad">${esc(q?.label)}: ${esc(b.description)}</div>`}html+='</section>'}
- if(p.customer.customer_type==='Företag'){html+='<h2>Detaljerade kontrollresultat</h2>';for(const d of p.details){html+=`<section><h3>${esc(d.e.number)} – ${esc(templateTitle(d.e.template_id))} – ${esc(d.e.manufacturer)} ${esc(d.e.model)} / ${esc(d.e.controller)}</h3>`;for(const q of d.points){const a=first(d.answers,x=>x.item_id===q.id);html+=`<div class="item">${esc(q.label)}: ${esc(a?.answer||'Ej kontrollerad')}</div>`}html+='</section>'}}
+ if(p.customer.customer_type==='Företag'){html+='<h2>Detaljerade kontrollresultat</h2>';for(const d of p.details){html+=`<section><h3>${esc(d.e.number)} – ${esc(templateTitle(d.e.template_id))} – ${esc(d.e.manufacturer)} ${esc(d.e.model)} / ${esc(d.e.controller)}</h3>`;for(const group of protocolCategories(d)){html+=`<div class="item">${esc(group.name)}: <strong>${esc(group.status)}</strong></div>`}html+='</section>'}}
  return html+'</div>';
 }
 async function generateProtocol(jobId,send){
@@ -298,7 +308,7 @@ async function generateProtocol(jobId,send){
  if(p.customer.customer_type==='Företag'){
  add('3. DETALJERADE KONTROLLER',{bold:true,size:13,after:8});
  for(const d of p.details){add(d.e.number+' – '+templateTitle(d.e.template_id)+' – '+d.e.manufacturer+' '+d.e.model+' / '+(d.e.controller||'Styrning okänd'),{bold:true,size:12,after:5});
- for(const q of d.points){const ans=first(d.answers,x=>x.item_id===q.id);add(q.label+' : '+(ans?.answer||'Ej kontrollerad'),{size:9,space:3})}y-=11;}
+ for(const group of protocolCategories(d)){add(group.name+' : '+group.status,{size:10,space:4,bold:group.status==='Brist'})}y-=11;}
  }
  const bytes=await doc.save();const blob=new Blob([bytes],{type:'application/pdf'});
  if(!live){const u=URL.createObjectURL(blob);const a=document.createElement('a');a.href=u;a.download='serviceprotokoll_'+p.job.service_date+'.pdf';a.click();setTimeout(()=>URL.revokeObjectURL(u),30000);return;}
