@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+<title>GPE Finspång Service App</title>
+<defs>
+ <linearGradient id="yellow" x2="0" y2="1"><stop stop-color="#fff432"/><stop offset="1" stop-color="#ffda00"/></linearGradient>
+ <linearGradient id="shirt" x2="0" y2="1"><stop stop-color="#1472c1"/><stop offset="1" stop-color="#003c77"/></linearGradient>
+</defs>
+<rect width="512" height="512" rx="80" fill="url(#yellow)"/>
+<rect x="60" y="140" width="390" height="212" rx="13" fill="#092b46" stroke="#005997" stroke-width="10"/>
+<g fill="none" stroke="#2275ac" stroke-width="9"><path d="M68 191h372M68 251h372M68 311h372"/></g>
+<rect x="315" y="164" width="112" height="28" rx="4" fill="#c7e8fc"/>
+<circle cx="170" cy="213" r="36" fill="#916032" stroke="#092b46" stroke-width="9"/>
+<circle cx="330" cy="213" r="36" fill="#916032" stroke="#092b46" stroke-width="9"/>
+<path d="M147 328Q116 401 168 423H332Q390 403 358 327" fill="url(#shirt)" stroke="#092b46" stroke-width="10"/>
+<ellipse cx="250" cy="244" rx="112" ry="119" fill="#734824" stroke="#092b46" stroke-width="10"/>
+<ellipse cx="250" cy="282" rx="89" ry="69" fill="#f8c883" stroke="#092b46" stroke-width="6"/>
+<path d="M142 187Q153 91 243 92Q325 87 365 172L328 192H168Z" fill="#00629c" stroke="#092b46" stroke-width="10"/>
+<path d="M184 140Q247 115 315 147L320 162H179Z" fill="#ffe52d"/>
+<text x="250" y="155" text-anchor="middle" font-family="Arial,sans-serif" font-size="35" font-weight="900" fill="#092b46">GPE</text>
+<path d="M145 198Q248 163 355 201L340 217Q250 194 162 218Z" fill="#092b46"/>
+<path d="M183 216Q210 197 242 217V243Q206 265 174 233Z" fill="#001c33" stroke="#c8e6ff" stroke-width="3"/>
+<path d="M256 217Q288 195 319 216L325 233Q291 263 257 244Z" fill="#001c33" stroke="#c8e6ff" stroke-width="3"/>
+<path d="M238 226h19" stroke="#092b46" stroke-width="9"/>
+<path d="M202 302Q249 335 303 299" fill="none" stroke="#092b46" stroke-linecap="round" stroke-width="9"/>
+<path d="M349 344l35-72 17-8 24 14-4 28-18 4-7-13-26 66" fill="#dfe7e9" stroke="#092b46" stroke-width="8" stroke-linejoin="round"/>
+<rect x="144" y="331" width="57" height="79" rx="14" fill="#00629c" stroke="#092b46" stroke-width="9"/>
+<rect x="305" y="331" width="57" height="79" rx="14" fill="#00629c" stroke="#092b46" stroke-width="9"/>
+<text x="256" y="461" text-anchor="middle" font-family="Arial,sans-serif" font-size="82" font-weight="900" fill="#003a77" stroke="#ffe52d" stroke-width="1">GPE</text>
+<text x="256" y="485" text-anchor="middle" font-family="Arial,sans-serif" font-size="22" font-weight="900" fill="#003a77">FINSPÅNG SERVICE APP</text>
+</svg>
