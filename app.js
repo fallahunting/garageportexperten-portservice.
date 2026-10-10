@@ -293,23 +293,70 @@ function buildPrint(jobId){const p=pdfLines(jobId),line=(a)=>a.map(x=>esc(x.numb
 async function generateProtocol(jobId,send){
  const p=pdfLines(jobId);
  const {PDFDocument,StandardFonts,rgb}=await import('https://esm.sh/pdf-lib@1.17.1');
- const doc=await PDFDocument.create();const regular=await doc.embedFont(StandardFonts.Helvetica),bold=await doc.embedFont(StandardFonts.HelveticaBold);
- const pg={w:595,h:842,left:42,right:42,top:45,bottom:43};let page,y;
- function newPage(){page=doc.addPage([pg.w,pg.h]);y=pg.h-pg.top;const n=doc.getPageCount();page.drawRectangle({x:0,y:pg.h-13,width:pg.w,height:13,color:rgb(1,.922,.255)});page.drawText('GARAGEPORTEXPERTEN · SERVICEPROTOKOLL',{x:pg.left,y:pg.h-33,font:bold,size:9,color:rgb(0,.29,.52)});page.drawText('Sida '+n,{x:pg.w-70,y:25,font:regular,size:9,color:rgb(.5,.55,.6)});y-=20;}
- function safe(s){return String(s??'').replace(/[\u2013\u2014]/g,'-').replace(/[\u2022]/g,'-').replace(/[^\u000a-\u00ff]/g,'?')}
- function wrap(s,font,size,width){let out=[];for(const paragraph of safe(s).split('\n')){let cur='';for(const word of (paragraph.split(/\s+/))){const test=cur?cur+' '+word:word;if(font.widthOfTextAtSize(test,size)>width&&cur){out.push(cur);cur=word}else cur=test;}out.push(cur)}return out;}
- function add(s,opts={}){const f=opts.bold?bold:regular,size=opts.size||10,space=opts.space??4,color=opts.color||rgb(.12,.2,.29);const lines=wrap(s,f,size,pg.w-pg.left-pg.right-(opts.indent||0));for(const line of lines){if(y<pg.bottom+size+4)newPage();page.drawText(line||' ',{x:pg.left+(opts.indent||0),y,font:f,size,color});y-=size+space;}if(opts.after)y-=opts.after;}
- newPage();add('SERVICEPROTOKOLL',{bold:true,size:20,space:8,after:8});add(p.customer.name,{bold:true,size:13});add(p.customer.address);add(`Service: ${p.job.service_date}   Objekt: ${p.all}   Utan brister: ${p.good.length}   Med brister: ${p.bad.length}`,{after:8});
- const technician=first(table('profiles'),x=>x.user_id===p.job.finished_by)?.display_name||sys.profile.display_name;add('Montör: '+technician,{after:10});
- add(`1. OBJEKT UTAN ANMÄRKNING (${p.good.length})`,{bold:true,size:13,after:2});add(p.good.map(e=>e.number).join(', ')||'Inga',{after:12});
- add(`2. OBJEKT MED BRISTER (${p.bad.length})`,{bold:true,size:13,after:2});
- if(!p.bad.length)add('Inga registrerade brister.',{after:5});
- for(const z of p.bad){add(z.e.number,{bold:true,size:12,after:1});for(const b of z.failed){const pt=first(items,x=>x.id===b.item_id);add('Brist: '+pt?.label,{bold:true});add(b.description,{indent:10,after:5})}}
- if(p.customer.customer_type==='Företag'){
- add('3. DETALJERADE KONTROLLER',{bold:true,size:13,after:8});
- for(const d of p.details){add(d.e.number+' – '+templateTitle(d.e.template_id)+' – '+d.e.manufacturer+' '+d.e.model+' / '+(d.e.controller||'Styrning okänd'),{bold:true,size:12,after:5});
- for(const group of protocolCategories(d)){add(group.name+' : '+group.status,{size:10,space:4,bold:group.status==='Brist'})}y-=11;}
+ const doc=await PDFDocument.create();
+ const regular=await doc.embedFont(StandardFonts.Helvetica),bold=await doc.embedFont(StandardFonts.HelveticaBold);
+ const pg={w:595,h:842,left:42,right:42,top:38,bottom:43};
+ const navy=rgb(.04,.26,.39),blue=rgb(.14,.39,.52),gray=rgb(.86,.88,.89);
+ let page,y;
+ function safe(v){return String(v??'').replace(/[\u2013\u2014]/g,'-').replace(/[\u2022]/g,'-').replace(/[^\u000a-\u00ff]/g,'?')}
+ function wrap(v,font,size,width){const lines=[];for(const para of safe(v).split('\n')){let cur='';for(const word of para.split(/\s+/)){const next=cur?cur+' '+word:word;if(font.widthOfTextAtSize(next,size)>width&&cur){lines.push(cur);cur=word}else cur=next}lines.push(cur)}return lines}
+ function textBlock(value,x,top,width,font=regular,size=10,color=navy,leading=14){let h=0;for(const line of wrap(value,font,size,width)){page.drawText(line||' ',{x,y:top-h,font,size,color});h+=leading}return h}
+ function newPage(){page=doc.addPage([pg.w,pg.h]);y=pg.h-pg.top;
+  const n=doc.getPageCount();
+  if(n>1){page.drawRectangle({x:0,y:pg.h-13,width:pg.w,height:13,color:blue});page.drawText('GARAGEPORTEXPERTEN  |  SERVICEPROTOKOLL',{x:pg.left,y:pg.h-33,size:9,font:bold,color:blue});y-=28}
+  page.drawText('Sida '+n,{x:pg.w-76,y:25,font:regular,size:9,color:blue});
  }
+ function add(value,opt={}){const font=opt.bold?bold:regular,size=opt.size||10,lead=opt.leading||size+4,space=opt.after||0;
+  for(const line of wrap(value,font,size,pg.w-pg.left-pg.right-(opt.indent||0))){if(y<pg.bottom+size+6)newPage();page.drawText(line||' ',{x:pg.left+(opt.indent||0),y,font,size,color:opt.color||navy});y-=lead}
+  y-=space;
+ }
+ function heading(v){if(y<pg.bottom+65)newPage();y-=8;add(v,{bold:true,size:12,after:5})}
+ newPage();
+ // Corporate header modeled on the offer: Garageportexperten left; protocol and customer right.
+ const logoY=pg.h-69;
+ for(let i=0;i<3;i++)page.drawRectangle({x:48,y:logoY-i*21,width:66,height:16,color:blue});
+ page.drawText('GARAGEPORT',{x:124,y:logoY-4,size:17,font:regular,color:blue});
+ page.drawText('EXPERTEN',{x:124,y:logoY-28,size:21,font:bold,color:blue});
+ page.drawText('PROTOKOLL',{x:329,y:pg.h-48,size:16,font:bold,color:navy});
+ page.drawRectangle({x:326,y:pg.h-158,width:224,height:89,borderWidth:1,borderColor:gray});
+ textBlock('Kund',339,pg.h-90,190,bold,9,navy,11);
+ textBlock(p.customer.name,339,pg.h-108,198,bold,11,navy,13);
+ page.drawText('Servicedatum: '+safe(p.job.service_date),{x:338,y:pg.h-144,size:9,font:regular,color:navy});
+ y=pg.h-188;
+ add('SERVICEUPPGIFTER',{bold:true,size:12,after:7});
+ add('Kund: '+p.customer.name,{bold:true,size:11});
+ add('Adress: '+p.customer.address);
+ const technician=first(table('profiles'),x=>x.user_id===p.job.finished_by)?.display_name||sys.profile.display_name;
+ add('Montör: '+technician);
+ add('Antal portar/objekt: '+p.all+'   Utan brister: '+p.good.length+'   Med brister: '+p.bad.length,{after:13});
+ heading('OBJEKT UTAN ANMÄRKNING ('+p.good.length+')');
+ add(p.good.map(x=>x.number).join(', ')||'Inga',{after:11});
+ heading('OBJEKT MED BRISTER ('+p.bad.length+')');
+ if(!p.bad.length)add('Inga registrerade brister.',{after:7});
+ for(const item of p.bad){add(item.e.number,{bold:true,size:11,after:3});
+  for(const fault of item.failed){const point=first(items,x=>x.id===fault.item_id);add((point?.label||'Kontrollpunkt')+' - Brist',{bold:true,size:10});add(fault.description||'Bristbeskrivning saknas',{indent:12,after:4})}
+  y-=5;
+ }
+ heading('KONTROLLRESULTAT PER KATEGORI');
+ for(const d of p.details){
+  if(y<pg.bottom+85)newPage();
+  add(d.e.number+' - '+templateTitle(d.e.template_id),{bold:true,size:11});
+  add([d.e.manufacturer,d.e.model,d.e.controller].filter(Boolean).join(' / '),{size:9,after:4});
+  for(const group of protocolCategories(d)){
+   add(group.name+' : '+group.status,{size:9,bold:group.status==='Brist',leading:12});
+  }
+  y-=10;
+ }
+ // Company information belongs at the bottom of the LAST page only.
+ const footerHeight=106;
+ if(y<pg.bottom+footerHeight)newPage();
+ const footerTop=pg.bottom+footerHeight;
+ page.drawLine({start:{x:pg.left,y:footerTop},end:{x:pg.w-pg.right,y:footerTop},thickness:0.9,color:gray});
+ const fy=footerTop-19;
+ textBlock('Port & Dörrexperten i Östergötland AB',pg.left,fy,205,bold,9,navy,12);
+ textBlock('Skäggebyvägen 13\n612 44 Finspång\nOrg.nr 556963-1103',pg.left,fy-15,165,regular,8.5,navy,12);
+ textBlock('Telefon 010-601 58 00\nMomsreg.nr SE556963110301\nBankgiro 5134-4521',239,fy,166,regular,8.5,navy,12);
+ textBlock('www.garageportexperten.se\nfinspang@garageportexperten.se\nGodkänd för F-skatt',416,fy,145,regular,8.2,navy,12);
  const bytes=await doc.save();const blob=new Blob([bytes],{type:'application/pdf'});
  if(!live){const u=URL.createObjectURL(blob);const a=document.createElement('a');a.href=u;a.download='serviceprotokoll_'+p.job.service_date+'.pdf';a.click();setTimeout(()=>URL.revokeObjectURL(u),30000);return;}
  const path=org()+'/'+jobId+'/serviceprotokoll-'+new Date().toISOString().replaceAll(':','-')+'-'+id()+'.pdf';
