@@ -18,3 +18,18 @@ input,select,textarea{font-size:16px}
 .technician-bar select{width:min(290px,100%);max-width:100%;border:2px solid var(--blue);background:#fff;font-weight:700;min-height:48px}
 .technician-hint{color:#405b6b;font-size:12px}
 @media(max-width:770px){.technician-bar{padding:12px 16px;gap:7px}.technician-bar label{width:100%}.technician-bar select{width:100%}.technician-hint{width:100%}}
+
+/* GPE Finspång Service App identity v5 – excludes the legacy corporate logo from UI. */
+.gpe-menu-brand{background:#ffeb41;padding:14px;min-height:220px;display:flex;justify-content:center;align-items:center}
+.gpe-menu-logo{display:block;object-fit:contain;width:min(100%,200px);height:auto;max-height:215px}
+.gpe-home-brand{margin:0 0 18px;padding:12px 18px;background:#ffeb41;border-radius:15px;text-align:center}
+.gpe-home-brand img{display:block;object-fit:contain;max-width:760px;width:100%;height:auto;margin:auto}
+.gpe-top-title{font-weight:800;font-size:15px;letter-spacing:.1px}
+.gpe-top-title small{color:#d2e8f5;font-weight:500}
+@media(max-width:770px){
+ .gpe-menu-brand{min-height:240px;padding:10px}
+ .gpe-menu-logo{max-height:210px}
+ .gpe-home-brand{margin-bottom:12px;padding:10px}
+ .gpe-top-title{font-size:14px}
+}
+@media(max-width:420px){.gpe-top-title{font-size:12px}}
