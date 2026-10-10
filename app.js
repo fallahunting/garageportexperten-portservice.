@@ -499,7 +499,13 @@ document.addEventListener('click',async ev=>{
    if(!activeEquipment.length){notify('Kunden har inga aktiva serviceobjekt.',true);return;}
    const existing=table('service_jobs').find(j=>j.customer_id===customer.id&&j.status==='draft');
    if(existing){
-    // An already-started service for this customer is the same visit.
+    // Complete any older automatically generated partial draft with all active customer ports.
+    const linked=new Set(jesFor(existing.id).map(je=>je.equipment_id));
+    const missing=activeEquipment.filter(e=>!linked.has(e.id));
+    if(missing.length){
+     await insertRows('job_equipment',missing.map(e=>({org_id:org(),job_id:existing.id,equipment_id:e.id})));
+     await refresh();
+    }
     sys.selectedJob=existing.id;sys.selectedJE=jesFor(existing.id)[0]?.id||null;
     sys.groupOpen={};sys.view='checklist';render();return;
    }
