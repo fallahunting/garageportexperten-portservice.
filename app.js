@@ -152,7 +152,7 @@ const labelStatus=jeid=>{const je=jeBy(jeid),e=equipBy(je?.equipment_id);if(!e)r
 function shell(title,subtitle,content){
  const nav=[['home','⌂','Startsida'],['customers','▦','Kunder'],['jobs','☷','Serviceuppdrag'],['checklist','☑','Checklista'],['issues','!','Öppna brister'],['reminders','▤','Påminnelser']];
  const n=nav.map(([k,ico,lab])=>`<button class="${sys.view===k?'active':''}" data-nav="${k}">${ico} &nbsp; ${lab}</button>`).join('');
- const inner=`<div class="shell"><aside class="side" id="sidebar"><div class="brand gpe-menu-brand"><img src="./assets/gpe-app-icon-192.png?v=6" alt="GPE Finspång Service App" class="gpe-menu-logo" /></div><div class="nav">${n}</div><div class="sidefoot">${live&&!publicTest?`${esc(sys.profile.display_name)}<br>${esc(sys.profile.role==='admin'?'Administratör':'Montör')}`:`<strong>${esc(sys.profile.display_name)}</strong><div class="muted small">Aktiv testmontör – byt längst upp i appen</div>`}</div></aside><div class="main">${sys.view==='home'?'<div class="gpe-top-brand"><img src="./assets/gpe-mascot-banner.webp?v=6" alt="GPE Finspång Service App" /></div>':''}<header class="topbar"><button class="mobilemenu" data-action="menu" aria-label="Öppna meny">☰ <span>Meny</span></button></header>${(publicTest||!live)?`<div class="technician-bar"><label for="active-technician">Aktiv montör</label><select id="active-technician" aria-label="Välj aktiv montör">${optionList(table('profiles').filter(p=>p.active!==false).map(p=>[p.user_id,p.display_name]),sys.profile.user_id)}</select><span class="technician-hint">Nya kontrollsvar registreras på vald montör. Ingen inloggning i testläget.</span></div>`:``}<main class="content"><h1>${esc(title)}</h1>${subtitle?`<p class="subhead">${esc(subtitle)}</p>`:''}${sys.banner?`<div class="notify ${sys.alertClass}">${esc(sys.banner)}</div>`:''}${content}<p class="footer">GPE Finspång Service App v6.0 ${publicTest?'· ÖPPEN TESTMILJÖ – uppgifter delas mellan alla besökare. Inga mejl skickas.':live?'· Företagsdatabas':'· LOKALT TEST – inga e-postutskick'}</p></main></div></div>`;
+ const inner=`<div class="shell"><aside class="side" id="sidebar"><div class="brand gpe-menu-brand"><img src="./assets/gpe-app-icon-192.png?v=6" alt="GPE Finspång Service App" class="gpe-menu-logo" /></div><div class="nav">${n}</div><div class="sidefoot">${live&&!publicTest?`${esc(sys.profile.display_name)}<br>${esc(sys.profile.role==='admin'?'Administratör':'Montör')}`:`<strong>${esc(sys.profile.display_name)}</strong><div class="muted small">Aktiv testmontör – byt längst upp i appen</div>`}</div></aside><div class="main">${sys.view==='home'?'<div class="gpe-top-brand"><img src="./assets/gpe-mascot-banner.webp?v=6" alt="GPE Finspång Service App" /></div>':''}<header class="topbar"><button class="mobilemenu" data-action="menu" aria-label="Öppna meny">☰ <span>Meny</span></button></header>${(publicTest||!live)?`<div class="technician-bar"><label for="active-technician">Aktiv montör</label><select id="active-technician" aria-label="Välj aktiv montör">${optionList(table('profiles').filter(p=>p.active!==false).map(p=>[p.user_id,p.display_name]),sys.profile.user_id)}</select><span class="technician-hint">Nya kontrollsvar registreras på vald montör. Ingen inloggning i testläget.</span></div>`:``}<main class="content"><h1>${esc(title)}</h1>${subtitle?`<p class="subhead">${esc(subtitle)}</p>`:''}${sys.banner?`<div class="notify ${sys.alertClass}">${esc(sys.banner)}</div>`:''}${content}<p class="footer">GPE Finspång Service App v6.1 ${publicTest?'· ÖPPEN TESTMILJÖ – uppgifter delas mellan alla besökare. Inga mejl skickas.':live?'· Företagsdatabas':'· LOKALT TEST – inga e-postutskick'}</p></main></div></div>`;
  $('#app').innerHTML=inner+(sys.modal?`<div class="modalback"><div class="modal" role="dialog" aria-modal="true">${sys.modal}</div></div>`:'');
 }
 function render(){if(!sys.signedIn)return renderLogin();let title='',sub='',body='';
@@ -416,18 +416,29 @@ async function handleSubmit(ev){const form=ev.target;if(!['loginform','customerf
     if(live){
      const chosenId=form.dataset.newCustomerId||(form.dataset.newCustomerId=id());
      const controller=new AbortController();
-     const timeout=setTimeout(()=>controller.abort(),15000);
-     try{
-      const result=await Promise.race([
-       client.from('customers').upsert([{id:chosenId,org_id:org(),...rec}],{onConflict:'id'}).select('*').abortSignal(controller.signal),
-       new Promise((_,reject)=>setTimeout(()=>reject(Error('Tidsgräns: kundsparningen fick inget svar från databasen inom 12 sekunder.')),12000))
-      ]);
-      if(result.error)throw result.error;
-      added=result.data;
-     }catch(err){
-      if(controller.signal.aborted)throw Error('Databasen svarade inte inom 15 sekunder. Kontrollera uppkopplingen och försök igen.');
-      throw err;
-     }finally{clearTimeout(timeout);}
+     const timer=setTimeout(()=>controller.abort(),12000);
+     try {
+      const endpoint=config.SUPABASE_URL.replace(/\/$/,'')+'/rest/v1/customers?on_conflict=id';
+      const response=await fetch(endpoint,{
+       method:'POST',
+       mode:'cors',
+       cache:'no-store',
+       signal:controller.signal,
+       headers:{
+        'apikey':config.SUPABASE_ANON_KEY,
+        'Authorization':'Bearer '+config.SUPABASE_ANON_KEY,
+        'Content-Type':'application/json',
+        'Prefer':'resolution=merge-duplicates,return=representation'
+       },
+       body:JSON.stringify([{id:chosenId,org_id:org(),...rec}])
+      });
+      const responseText=await response.text();
+      if(!response.ok)throw Error('Databasfel '+response.status+': '+responseText.slice(0,350));
+      added=JSON.parse(responseText);
+     }catch(error){
+      if(error.name==='AbortError')throw Error('Kundsparningen fick inget svar inom 12 sekunder. Försök igen.');
+      throw error;
+     }finally{clearTimeout(timer);}
     }else{added=await insertRows('customers',[{org_id:org(),...rec}]);}
     if(!added?.[0]?.id)throw Error('Databasen bekräftade inte att kunden skapades.');
     sys.selectedCustomer=added[0].id;
