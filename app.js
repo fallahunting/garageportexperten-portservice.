@@ -10,6 +10,7 @@ const first=(xs,p)=>xs.find(p);
 const config=window.GPE_CONFIG||{};
 const live=Boolean(config.SUPABASE_URL && config.SUPABASE_ANON_KEY);
 const publicTest=live&&config.PUBLIC_TEST===true;
+const sharedLogin=live&&!publicTest&&config.SHARED_LOGIN===true;
 let client=null;
 const months=(s,n)=>{const d=new Date(s+'T12:00:00');const t=new Date(d.getFullYear(),d.getMonth()+n,1,12);t.setDate(Math.min(d.getDate(),new Date(t.getFullYear(),t.getMonth()+1,0).getDate()));return t.toISOString().slice(0,10)};
 const sys={profile:null,user:null,view:'home',selectedCustomer:null,selectedJob:null,selectedJE:null,groupOpen:{},filter:'',banner:'',alertClass:'',modal:null,templates:[],tables:{},signedIn:false,busy:false,mailReady:live&&config.REPORT_EMAIL_ENABLED};
@@ -72,7 +73,7 @@ async function init(){
    if(live){
      const supabase=await import('https://esm.sh/@supabase/supabase-js@2.49.4');
      createClient=supabase.createClient;
-     client=createClient(config.SUPABASE_URL,config.SUPABASE_ANON_KEY,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
+     client=createClient(config.SUPABASE_URL,config.SUPABASE_ANON_KEY,{auth:{persistSession:sharedLogin,autoRefreshToken:sharedLogin,detectSessionInUrl:false}});
      if(publicTest){
        sys.signedIn=true;
        sys.selectedCustomer='palladium-test-customer';
@@ -80,8 +81,8 @@ async function init(){
        await prepareDueJobs();
      }else{
        const {data}=await client.auth.getSession();
-       if(data?.session)await loadUser(data.session.user);else renderLogin();
-       client.auth.onAuthStateChange(async(ev,session)=>{if(ev==='SIGNED_OUT'){sys.user=null;sys.signedIn=false;renderLogin()}else if(ev==='SIGNED_IN'&&!sys.signedIn&&session)await loadUser(session.user)});
+       if(data?.session){if(sharedLogin){sys.signedIn=true;await refresh();}else await loadUser(data.session.user);}else renderLogin();
+       client.auth.onAuthStateChange(async(ev,session)=>{if(ev==='SIGNED_OUT'){sys.user=null;sys.signedIn=false;renderLogin()}else if(ev==='SIGNED_IN'&&!sys.signedIn&&session){if(sharedLogin){sys.signedIn=true;await refresh();}else await loadUser(session.user)}});
      }
    }else{
      let cached=null;
@@ -123,7 +124,7 @@ async function refresh(){
  const names=['organizations','profiles','customers','equipment','service_jobs','job_equipment','inspection_answers','issues','issue_service_checks'];
  const rows=await Promise.all(names.map(t=>getRows(t,{})));
  names.forEach((name,i)=>sys.tables[name]=rows[i]);
- if(publicTest){
+ if(publicTest||sharedLogin){
    const preferred=localStorage.getItem(TECHKEY);
    sys.profile=table('profiles').find(x=>x.user_id===preferred)||table('profiles')[0];
    if(!sys.profile)throw Error('Montörerna saknas i projektets databas. Installera startdata.sql.');
@@ -152,7 +153,7 @@ const labelStatus=jeid=>{const je=jeBy(jeid),e=equipBy(je?.equipment_id);if(!e)r
 function shell(title,subtitle,content){
  const nav=[['home','⌂','Startsida'],['customers','▦','Kunder'],['jobs','☷','Serviceuppdrag'],['issues','!','Öppna brister']];
  const n=nav.map(([k,ico,lab])=>`<button class="${sys.view===k?'active':''}" data-nav="${k}">${ico} &nbsp; ${lab}</button>`).join('');
- const inner=`<div class="shell"><aside class="side" id="sidebar"><div class="brand gpe-menu-brand"><img src="./assets/gpe-app-icon-192.png?v=6" alt="GPE Finspång Service App" class="gpe-menu-logo" /></div><div class="nav">${n}</div><div class="sidefoot">${live&&!publicTest?`${esc(sys.profile.display_name)}<br>${esc(sys.profile.role==='admin'?'Administratör':'Montör')}`:`<strong>${esc(sys.profile.display_name)}</strong><div class="muted small">Aktiv testmontör – byt längst upp i appen</div>`}</div></aside><div class="main">${sys.view==='home'?'<div class="gpe-top-brand"><img src="./assets/gpe-mascot-banner.webp?v=6" alt="GPE Finspång Service App" /></div>':''}<header class="topbar"><button class="mobilemenu" data-action="menu" aria-label="Öppna meny">☰ <span>Meny</span></button></header>${(publicTest||!live)?`<div class="technician-bar"><label for="active-technician">Aktiv montör</label><select id="active-technician" aria-label="Välj aktiv montör">${optionList(table('profiles').filter(p=>p.active!==false).map(p=>[p.user_id,p.display_name]),sys.profile.user_id)}</select><span class="technician-hint">Nya kontrollsvar registreras på vald montör. Ingen inloggning i testläget.</span></div>`:``}<main class="content"><h1>${esc(title)}</h1>${subtitle?`<p class="subhead">${esc(subtitle)}</p>`:''}${sys.banner?`<div class="notify ${sys.alertClass}">${esc(sys.banner)}</div>`:''}${content}<p class="footer">GPE Finspång Service App v6.2 ${publicTest?'· ÖPPEN TESTMILJÖ – uppgifter delas mellan alla besökare. Inga mejl skickas.':live?'· Företagsdatabas':'· LOKALT TEST – inga e-postutskick'}</p></main></div></div>`;
+ const inner=`<div class="shell"><aside class="side" id="sidebar"><div class="brand gpe-menu-brand"><img src="./assets/gpe-app-icon-192.png?v=6" alt="GPE Finspång Service App" class="gpe-menu-logo" /></div><div class="nav">${n}</div><div class="sidefoot">${live&&!publicTest?`${esc(sys.profile.display_name)}<br>${esc(sys.profile.role==='admin'?'Administratör':'Montör')}`:`<strong>${esc(sys.profile.display_name)}</strong><div class="muted small">Aktiv testmontör – byt längst upp i appen</div>`}</div></aside><div class="main">${sys.view==='home'?'<div class="gpe-top-brand"><img src="./assets/gpe-mascot-banner.webp?v=6" alt="GPE Finspång Service App" /></div>':''}<header class="topbar"><button class="mobilemenu" data-action="menu" aria-label="Öppna meny">☰ <span>Meny</span></button></header>${(publicTest||sharedLogin||!live)?`<div class="technician-bar"><label for="active-technician">Aktiv montör</label><select id="active-technician" aria-label="Välj aktiv montör">${optionList(table('profiles').filter(p=>p.active!==false).map(p=>[p.user_id,p.display_name]),sys.profile.user_id)}</select><span class="technician-hint">Nya kontrollsvar registreras på vald montör.</span></div>`:``}<main class="content"><h1>${esc(title)}</h1>${subtitle?`<p class="subhead">${esc(subtitle)}</p>`:''}${sys.banner?`<div class="notify ${sys.alertClass}">${esc(sys.banner)}</div>`:''}${content}<p class="footer">GPE Finspång Service App v6.2 ${publicTest?'· ÖPPEN TESTMILJÖ – uppgifter delas mellan alla besökare. Inga mejl skickas.':live?'· Företagsdatabas':'· LOKALT TEST – inga e-postutskick'}</p></main></div></div>`;
  $('#app').innerHTML=inner+(sys.modal?`<div class="modalback"><div class="modal" role="dialog" aria-modal="true">${sys.modal}</div></div>`:'');
 }
 function render(){if(!sys.signedIn)return renderLogin();let title='',sub='',body='';
@@ -166,7 +167,7 @@ function render(){if(!sys.signedIn)return renderLogin();let title='',sub='',body
  shell(title,sub,body);
 }
 function renderLogin(){
- $('#app').innerHTML=`<div class="login"><div class="brand smallbrand"><img src="./assets/gpe-app-icon-192.png?v=6" alt="GPE Finspång Service App" class="gpe-menu-logo" /></div><div class="loginbody"><h2>Portservice – logga in</h2><form id="loginform"><div class="field"><label>E-post</label><input type="email" name="email" required autocomplete="username" /></div><div class="field"><label>Lösenord</label><input name="password" type="password" required autocomplete="current-password"/></div><button class="action" type="submit">Logga in</button></form><p class="small muted">Alla montörer har egna konton. Nya användare läggs till av administratören.</p></div></div>`;
+ $('#app').innerHTML=`<div class="login"><div class="brand smallbrand"><img src="./assets/gpe-app-icon-192.png?v=6" alt="GPE Finspång Service App" class="gpe-menu-logo" /></div><div class="loginbody"><h2>Portservice – logga in</h2><form id="loginform"><div class="field"><label>${sharedLogin?'Användarnamn':'E-post'}</label><input type="text" name="email" required autocomplete="username" ${sharedLogin?'value="Balto"':''} /></div><div class="field"><label>Lösenord</label><input name="password" type="password" required autocomplete="current-password"/></div><button class="action" type="submit">Logga in</button></form><p class="small muted">${sharedLogin?'Alla använder samma inloggning och väljer sedan aktiv montör.':'Alla montörer har egna konton. Nya användare läggs till av administratören.'}</p></div></div>`;
 }
 function renderHome(){
  const homeBrand='<div class="gpe-home-brand"><img src="./assets/gpe-mascot-banner.webp?v=6" alt="GPE Finspång Service App – apa med verktyg" /></div>';
@@ -473,7 +474,7 @@ async function handleAction(a,btn){
 }
 async function handleSubmit(ev){const form=ev.target;if(!['loginform','customerform','equipmentform','jobform'].includes(form.id))return;ev.preventDefault();if(form.dataset.saving==='1')return;form.dataset.saving='1';const status=document.createElement('p');status.className='small muted save-status';status.textContent='Sparar, vänta…';form.append(status);const f=new FormData(form);const v=key=>String(f.get(key)||'').trim();
  try{
-  if(form.id==='loginform'){const {error}=await client.auth.signInWithPassword({email:v('email'),password:v('password')});if(error)throw error;return;}
+  if(form.id==='loginform'){const {error}=await client.auth.signInWithPassword({email:sharedLogin?'martin.olsson@garageportexperten.se':v('email'),password:v('password')});if(error)throw error;return;}
   if(form.id==='customerform'){
    if(![3,6,12].includes(Number(v('service_interval_months'))))throw Error('Välj 3, 6 eller 12 månaders serviceintervall för kunden.');
    const rec={customer_type:v('customer_type'),name:v('name'),address:v('address'),contact:v('contact'),phone:v('phone'),email:v('email'),service_interval_months:Number(v('service_interval_months'))};
