@@ -662,7 +662,7 @@ document.addEventListener('click',async function saveCustomerDirect(event){
    try{
     show('2/3 Skickar kunden till databasen…');
     const url=config.SUPABASE_URL.replace(/\/$/,'')+'/rest/v1/customers?on_conflict=id';
-    const res=await fetch(url,{method:'POST',mode:'cors',cache:'no-store',signal:abort.signal,headers:{'apikey':config.SUPABASE_ANON_KEY,'Authorization':'Bearer '+config.SUPABASE_ANON_KEY,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates,return=representation'},body:JSON.stringify([request])});
+    const res=await fetch(url,{method:'POST',mode:'cors',cache:'no-store',signal:abort.signal,headers:{'apikey':config.SUPABASE_ANON_KEY,'Authorization':'Bearer '+(await client.auth.getSession()).data.session?.access_token,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates,return=representation'},body:JSON.stringify([request])});
     const body=await res.text();
     if(!res.ok)throw Error('Databasen svarade '+res.status+': '+body.slice(0,280));
     const rows=JSON.parse(body);customer=rows[0];
@@ -714,7 +714,7 @@ document.addEventListener('click',async function saveEquipmentDirect(event){
    try{
     const endpoint=config.SUPABASE_URL.replace(/\/$/,'')+'/rest/v1/equipment?on_conflict=id';
     const payload={id:chosenId,org_id:org(),...record};
-    const response=await fetch(endpoint,{method:'POST',mode:'cors',cache:'no-store',signal:controller.signal,headers:{apikey:config.SUPABASE_ANON_KEY,Authorization:'Bearer '+config.SUPABASE_ANON_KEY,'Content-Type':'application/json',Prefer:'resolution=merge-duplicates,return=representation'},body:JSON.stringify([payload])});
+    const response=await fetch(endpoint,{method:'POST',mode:'cors',cache:'no-store',signal:controller.signal,headers:{apikey:config.SUPABASE_ANON_KEY,Authorization:'Bearer '+(await client.auth.getSession()).data.session?.access_token,'Content-Type':'application/json',Prefer:'resolution=merge-duplicates,return=representation'},body:JSON.stringify([payload])});
     const body=await response.text();
     if(!response.ok)throw Error('Databasfel '+response.status+': '+body.slice(0,350));
     equipment=JSON.parse(body)[0];
