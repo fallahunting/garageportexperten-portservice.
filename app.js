@@ -183,7 +183,7 @@ function renderCustomers(){let list=table('customers');if(sys.filter)list=list.f
  return `<div class="toolbar"><input class="search" id="filter" placeholder="Sök kund eller adress" value="${esc(sys.filter)}" aria-label="Sök kund"><button class="action" data-action="new-customer">+ Ny kund</button></div><div class="card">${list.length?list.sort((a,b)=>a.name.localeCompare(b.name,'sv')).map(c=>`<div class="listrow"><div><strong>${esc(c.name)}</strong><div class="small muted">${esc(c.customer_type)} · ${esc(c.address)} · ${equipmentFor(c.id).length} objekt</div><div class="small muted">${esc(c.email)}</div></div><button class="action secondary" data-customer="${esc(c.id)}">Öppna</button></div>`).join(''):'<p>Ingen kund hittades.</p>'}</div>${sys.selectedCustomer&&sys.customerDetailOpen?renderCustomerDetail():''}`;
 }
 function renderCustomerDetail(){const c=customerBy(sys.selectedCustomer);if(!c)return'';
- return `<div class="card"><div class="toolbar"><h2>${esc(c.name)}</h2><div class="right"><button class="action secondary" data-action="edit-customer">Redigera</button><button class="action" data-action="new-equipment">+ Objekt</button><button class="action yellow" data-action="create-job">Starta service</button></div></div><p class="small muted">${esc(c.address)} · Kontakt: ${esc(c.contact)} · ${esc(c.phone)} · ${esc(c.email)}</p><h3>Registrerade objekt</h3>${equipmentFor(c.id).map(e=>`<div class="listrow"><div><strong>${esc(e.number)}</strong><div class="small muted">${esc(templateTitle(e.template_id))} ${e.manufacturer? '· '+esc(e.manufacturer):''} ${e.model?' '+esc(e.model):''} ${e.controller?'· Styrning '+esc(e.controller):''} · ${e.interval_months?e.interval_months+' mån':'Intervall ej valt'}</div></div><div class="toolbar"><button class="action secondary" data-edit-equipment="${esc(e.id)}">Redigera</button><button class="action secondary" data-replace-equipment="${esc(e.id)}">Byt ut</button><button class="action secondary" data-retire-equipment="${esc(e.id)}">Ta ur drift</button></div></div>`).join('')||'<p>Inga objekt ännu.</p>'}</div>`;
+ return `<div class="card"><div class="toolbar"><h2>${esc(c.name)}</h2><div class="right"><button class="action secondary" data-action="edit-customer">Redigera</button><button class="action" data-action="new-equipment">+ Objekt</button><button class="action yellow" data-action="create-job">Starta service</button></div></div><p class="small muted">${esc(c.address)} · Kontakt: ${esc(c.contact)} · ${esc(c.phone)} · ${esc(c.email)}</p><h3>Registrerade objekt</h3>${equipmentFor(c.id).map(e=>`<div class="listrow"><div><strong>${esc(e.number)}</strong><div class="small muted">${esc(templateTitle(e.template_id))} ${e.manufacturer? '· '+esc(e.manufacturer):''} ${e.model?' '+esc(e.model):''} ${e.controller?'· Styrning '+esc(e.controller):''} · ${e.interval_months?e.interval_months+' mån':'Intervall ej valt'}</div></div><div class="toolbar"><button class="action secondary" data-edit-equipment="${esc(e.id)}">Redigera</button><button class="action secondary" data-replace-equipment="${esc(e.id)}">Byt ut</button><button class="action secondary" data-retire-equipment="${esc(e.id)}">Ta ur drift</button></div></div>`).join('')||'<p>Inga objekt ännu.</p>'}<div style="margin-top:24px;padding-top:16px;border-top:1px solid #d7e0e7"><strong>Kundadministration</strong><p class="small muted">Permanent radering av kunden och hela dess servicehistorik.</p><button type="button" class="action secondary" style="color:#a52b2b;border-color:#c87979" data-action="delete-customer">Ta bort kund</button></div></div>`;
 }
 function renderEquipments(){let xs=table('equipment').filter(e=>e.active!==false);if(sys.filter)xs=xs.filter(e=>(e.number+' '+customerBy(e.customer_id)?.name+' '+e.manufacturer).toLowerCase().includes(sys.filter.toLowerCase()));return `<div class="toolbar"><input class="search" id="filter" placeholder="Sök portnummer, kund, fabrikat" value="${esc(sys.filter)}"><button class="action" data-action="new-equipment">+ Nytt objekt</button></div><div class="card">${xs.slice(0,300).map(e=>`<div class="listrow"><div><strong>${esc(e.number)}</strong> <span class="badge">${esc(templateTitle(e.template_id))}</span><div class="small muted">${esc(customerBy(e.customer_id)?.name)} · nästa ${esc(e.next_service_on||'Ej planerad')}</div></div><button class="action secondary" data-edit-equipment="${esc(e.id)}">Ändra</button></div>`).join('')||'<p>Inga serviceobjekt registrerade ännu.</p>'}</div>`;}
 function renderJobs(){return `<div class="toolbar"><div class="muted small">Ett uppdrag kan fortsätta flera dagar.</div><button class="action" data-action="new-job">+ Nytt serviceuppdrag</button></div><div class="card">${jobsFor().map(j=>`<div class="listrow"><div><strong>${esc(customerBy(j.customer_id)?.name)}</strong><div class="muted small">${esc(j.service_date)} · ${jobProgress(j.id).n} objekt</div></div><div class="right"><span class="badge ${j.status==='completed'?'good':'warn'}">${j.status==='completed'?'Avslutad':'Pågår'}</span><button class="action secondary" data-job="${esc(j.id)}">Öppna</button></div></div>`).join('')||'<p>Inga uppdrag finns ännu.</p>'}</div>`;}
@@ -525,6 +525,30 @@ async function handleAction(a,btn){
  }
  if(a==='new-customer'){modal(customerForm(null));return}
  if(a==='edit-customer'){modal(customerForm(customerBy(sys.selectedCustomer)));return}
+ if(a==='delete-customer'){
+  const c=customerBy(sys.selectedCustomer);if(!c)return;
+  if(sys.profile?.role!=='admin'){notify('Endast administratör kan radera kunder.',true);return;}
+  const n=table('equipment').filter(e=>e.customer_id===c.id).length;
+  const jobs=jobsFor(c.id).length;
+  modal('<h2>Ta bort kund permanent</h2><p><strong>'+esc(c.name)+'</strong></p><p>Detta raderar kunden, samtliga '+n+' objekt, '+jobs+' serviceuppdrag, kontrollsvar och brister. Det går inte att ångra.</p><p class="small muted">Skriv RADERA för att bekräfta. Radering kräver administratörsinloggning.</p><input type="text" id="delete-customer-confirmation" autocomplete="off" placeholder="Skriv RADERA" aria-label="Bekräfta permanent radering"><div class="toolbar" style="margin-top:18px"><button type="button" class="action secondary" data-action="close-modal">Avbryt</button><button type="button" class="action" style="background:#ae2727;color:white" data-action="confirm-delete-customer">Radera permanent</button></div>');
+  return;
+ }
+ if(a==='confirm-delete-customer'){
+  const c=customerBy(sys.selectedCustomer);if(!c)return;
+  const confirmation=$('#delete-customer-confirmation')?.value.trim();
+  if(confirmation!=='RADERA'){notify('Skriv RADERA exakt för att bekräfta.',true);return;}
+  if(!live){notify('Permanent radering stöds bara mot den riktiga databasen.',true);return;}
+  if(sys.profile?.role!=='admin'){notify('Endast administratör kan radera kunder.',true);return;}
+  const btn=document.querySelector('[data-action="confirm-delete-customer"]');if(btn){btn.disabled=true;btn.textContent='Raderar…';}
+  try{
+   const {data,error}=await client.rpc('delete_customer_permanently',{p_customer_id:c.id,p_confirmation:confirmation});
+   if(error)throw error;
+   sys.selectedCustomer=null;sys.customerDetailOpen=false;sys.modal=null;sys.filter='';
+   await refresh();notify('Kunden och tillhörande servicedata har raderats permanent.');
+  }catch(err){notify('Radering misslyckades: '+(err.message||err),true);if(btn?.isConnected){btn.disabled=false;btn.textContent='Radera permanent';}}
+  return;
+ }
+
  if(a==='new-equipment'){if(!table('customers').length){notify('Lägg upp en kund först.',true);return}modal(equipmentForm(null));return}
  if(a==='new-job'){if(!table('customers').length){notify('Lägg upp en kund först.',true);return}modal(newJobForm());return}
  if(a==='create-job'){modal(newJobForm());return}
