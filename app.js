@@ -153,7 +153,7 @@ const labelStatus=jeid=>{const je=jeBy(jeid),e=equipBy(je?.equipment_id);if(!e)r
 function shell(title,subtitle,content){
  const nav=[['home','⌂','Startsida'],['customers','▦','Kunder'],['jobs','☷','Serviceuppdrag'],['issues','!','Öppna brister']];
  const n=nav.map(([k,ico,lab])=>`<button class="${sys.view===k?'active':''}" data-nav="${k}">${ico} &nbsp; ${lab}</button>`).join('');
- const inner=`<div class="shell"><aside class="side" id="sidebar"><div class="brand gpe-menu-brand"><img src="./assets/gpe-app-icon-192.png?v=6" alt="GPE Finspång Service App" class="gpe-menu-logo" /></div><div class="nav">${n}</div><div class="sidefoot">${live&&!publicTest?`${esc(sys.profile.display_name)}<br>${esc(sys.profile.role==='admin'?'Administratör':'Montör')}`:`<strong>${esc(sys.profile.display_name)}</strong><div class="muted small">Aktiv testmontör – byt längst upp i appen</div>`}</div></aside><div class="main">${sys.view==='home'?'<div class="gpe-top-brand"><img src="./assets/gpe-mascot-banner.webp?v=6" alt="GPE Finspång Service App" /></div>':''}<header class="topbar"><button class="mobilemenu" data-action="menu" aria-label="Öppna meny">☰ <span>Meny</span></button></header>${(publicTest||sharedLogin||!live)?`<div class="technician-bar"><label for="active-technician">Aktiv montör</label><select id="active-technician" aria-label="Välj aktiv montör">${optionList(table('profiles').filter(p=>p.active!==false).map(p=>[p.user_id,p.display_name]),sys.profile.user_id)}</select><span class="technician-hint">Nya kontrollsvar registreras på vald montör.</span></div>`:``}<main class="content"><h1>${esc(title)}</h1>${subtitle?`<p class="subhead">${esc(subtitle)}</p>`:''}${sys.banner?`<div class="notify ${sys.alertClass}">${esc(sys.banner)}</div>`:''}${content}<p class="footer">GPE Finspång Service App v6.2 ${publicTest?'· ÖPPEN TESTMILJÖ – uppgifter delas mellan alla besökare. Inga mejl skickas.':live?'· Företagsdatabas':'· LOKALT TEST – inga e-postutskick'}</p></main></div></div>`;
+ const inner=`<div class="shell"><aside class="side" id="sidebar"><div class="brand gpe-menu-brand"><img src="./assets/gpe-app-icon-192.png?v=6" alt="GPE Finspång Service App" class="gpe-menu-logo" /></div><div class="nav">${n}</div><div class="sidefoot">${live&&!publicTest&&!sharedLogin?`${esc(sys.profile.display_name)}<br>${esc(sys.profile.role==='admin'?'Administratör':'Montör')}`:`<strong>${esc(sys.profile.display_name)}</strong><div class="muted small">Aktiv montör – byt längst upp i appen</div>`}</div></aside><div class="main">${sys.view==='home'?'<div class="gpe-top-brand"><img src="./assets/gpe-mascot-banner.webp?v=6" alt="GPE Finspång Service App" /></div>':''}<header class="topbar"><button class="mobilemenu" data-action="menu" aria-label="Öppna meny">☰ <span>Meny</span></button></header>${(publicTest||sharedLogin||!live)?`<div class="technician-bar"><label for="active-technician">Aktiv montör</label><select id="active-technician" aria-label="Välj aktiv montör">${optionList(table('profiles').filter(p=>p.active!==false).map(p=>[p.user_id,p.display_name]),sys.profile.user_id)}</select><span class="technician-hint">Nya kontrollsvar registreras på vald montör.</span></div>`:``}<main class="content"><h1>${esc(title)}</h1>${subtitle?`<p class="subhead">${esc(subtitle)}</p>`:''}${sys.banner?`<div class="notify ${sys.alertClass}">${esc(sys.banner)}</div>`:''}${content}<p class="footer">GPE Finspång Service App v6.2 ${publicTest?'· ÖPPEN TESTMILJÖ – uppgifter delas mellan alla besökare. Inga mejl skickas.':live?'· Företagsdatabas':'· LOKALT TEST – inga e-postutskick'}</p></main></div></div>`;
  $('#app').innerHTML=inner+(sys.modal?`<div class="modalback"><div class="modal" role="dialog" aria-modal="true">${sys.modal}</div></div>`:'');
 }
 function render(){if(!sys.signedIn)return renderLogin();let title='',sub='',body='';
@@ -447,7 +447,7 @@ async function handleAction(a,btn){
   modal(installHelp());return;
  }
  if(a==='close-modal'){sys.modal=null;render();return}
- if(a==='logout'){if(live)await client.auth.signOut();else notify('Demoläget saknar riktig inloggning.');return}
+ if(a==='logout'){if(live){sys.signedIn=false;sys.user=null;sys.profile=null;await client.auth.signOut();renderLogin();}else notify('Demoläget saknar riktig inloggning.');return}
  if(a==='save-customer'){
   const form=document.querySelector('#customerform');
   if(!form)return;
@@ -493,7 +493,7 @@ async function handleSubmit(ev){const form=ev.target;if(!['loginform','customerf
        signal:controller.signal,
        headers:{
         'apikey':config.SUPABASE_ANON_KEY,
-        'Authorization':'Bearer '+config.SUPABASE_ANON_KEY,
+        'Authorization':'Bearer '+(sharedLogin?(await client.auth.getSession()).data.session?.access_token:config.SUPABASE_ANON_KEY),
         'Content-Type':'application/json',
         'Prefer':'resolution=merge-duplicates,return=representation'
        },
@@ -750,7 +750,7 @@ document.addEventListener('submit',handleSubmit);
 document.addEventListener('change',async ev=>{if(ev.target.dataset.intervalObject){
  const n=Number(ev.target.value);if(![3,6,12].includes(n))return;
  try{const e=equipBy(ev.target.dataset.intervalObject);await updateRow('equipment',e.id,{interval_months:n,responsible_user:e.responsible_user||sys.user.id});await refresh();notify('Serviceintervall sparat.')}catch(err){notify(err.message,true)}return;
- }if(ev.target.id==='equips'){sys.selectedJE=ev.target.value;sys.groupOpen={};render()} if((ev.target.id==='active-technician'||ev.target.id==='demo-technician')&&(!live||publicTest)){const p=first(table('profiles'),p=>p.user_id===ev.target.value&&p.active!==false);if(p){sys.profile=p;sys.user={id:p.user_id,email:''};localStorage.setItem(TECHKEY,p.user_id);sys.banner='Aktiv montör: '+p.display_name+'. Nya kontroller registreras på denna montör.';sys.alertClass='success';render()}}});
+ }if(ev.target.id==='equips'){sys.selectedJE=ev.target.value;sys.groupOpen={};render()} if((ev.target.id==='active-technician'||ev.target.id==='demo-technician')&&(!live||publicTest||sharedLogin)){const p=first(table('profiles'),p=>p.user_id===ev.target.value&&p.active!==false);if(p){sys.profile=p;sys.user={id:p.user_id,email:''};localStorage.setItem(TECHKEY,p.user_id);sys.banner='Aktiv montör: '+p.display_name+'. Nya kontroller registreras på denna montör.';sys.alertClass='success';render()}}});
 document.addEventListener('input',ev=>{if(ev.target.id==='filter'){const start=ev.target.selectionStart;sys.filter=ev.target.value;render();const inp=$('#filter');inp?.focus();inp?.setSelectionRange(start,start)}});
 document.addEventListener('focusout',async ev=>{
  const text=ev.target;if(!text.matches('[data-description]'))return;
