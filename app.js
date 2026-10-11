@@ -487,12 +487,20 @@ async function generateProtocol(jobId,send){
  textBlock('Telefon 010-601 58 00\nMomsreg.nr SE556963110301\nBankgiro 5134-4521',239,fy,166,regular,8.5,navy,12);
  textBlock('garageportexperten.se\nfinspang@garageportexperten.se\nGodkänd för F-skatt',414,fy,139,regular,7.6,navy,12);
  const bytes=await doc.save();const blob=new Blob([bytes],{type:'application/pdf'});
- if(!live){const u=URL.createObjectURL(blob);const a=document.createElement('a');a.href=u;a.download='GPE_protokoll_ny_layout_'+p.job.service_date+'.pdf';a.click();setTimeout(()=>URL.revokeObjectURL(u),30000);return;}
+ // Downloading a historical protocol is read-only. No storage or database write.
+ // Current production has no PDF storage bucket and protocol email is disabled.
+ if(!send||!live||!sys.mailReady){
+  const u=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=u;a.download='GPE_protokoll_ny_layout_'+p.job.service_date+'.pdf';
+  document.body.append(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(u),30000);
+  return;
+ }
  const path=org()+'/'+jobId+'/serviceprotokoll-'+new Date().toISOString().replaceAll(':','-')+'-'+id()+'.pdf';
  const {error}=await client.storage.from('service-protocols').upload(path,blob,{contentType:'application/pdf',upsert:false});if(error)throw error;
  await updateRow('service_jobs',jobId,{pdf_path:path});
- if(send&&sys.mailReady){const {error}=await client.functions.invoke('send-protocol',{body:{job_id:jobId}});if(error)throw new Error('PDF sparad men e-post gick inte iväg: '+error.message);}
- else{const u=URL.createObjectURL(blob);const a=document.createElement('a');a.href=u;a.download='GPE_protokoll_ny_layout_'+p.job.service_date+'.pdf';a.click();setTimeout(()=>URL.revokeObjectURL(u),30000)}
+ const {error:mailError}=await client.functions.invoke('send-protocol',{body:{job_id:jobId}});
+ if(mailError)throw new Error('PDF sparad men e-post gick inte iväg: '+mailError.message);
 }
 async function handleAction(a,btn){
  if(a==='export-demo'&&!live){
