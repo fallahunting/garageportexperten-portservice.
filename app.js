@@ -321,7 +321,45 @@ async function generateProtocol(jobId,send){
  newPage();
  // Corporate header modeled on the offer: Garageportexperten left; protocol and customer right.
  const technician=first(table('profiles'),x=>x.user_id===p.job.finished_by)?.display_name||sys.profile.display_name;
- if(industrial){
+ if(['BRF','Samfällighet'].includes(p.customer.customer_type)){
+  const green=rgb(.08,.45,.28),red=rgb(.73,.20,.16),pale=rgb(.94,.97,.98);
+  page.drawRectangle({x:0,y:pg.h-13,width:pg.w,height:13,color:blue});
+  add('GARAGEPORTEXPERTEN',{bold:true,size:18,color:blue,after:3});
+  add('SERVICEPROTOKOLL - BRF / SAMFALLIGHET',{bold:true,size:12,after:15});
+  page.drawRectangle({x:pg.left,y:y-83,width:pg.w-pg.left-pg.right,height:83,color:pale});
+  let infoY=y-16;
+  for(const txt of [p.customer.name,p.customer.address||'',p.job.service_date+'  |  Montör: '+technician]){
+   page.drawText(safe(txt).slice(0,95),{x:pg.left+12,y:infoY,font:infoY===y-16?bold:regular,size:infoY===y-16?11:9,color:navy});infoY-=24;
+  }
+  y-=106;
+  add('PORTÖVERSIKT',{bold:true,size:11,after:8});
+  const faultCount=p.details.filter(d=>d.answers.some(a=>a.answer==='Brist')).length;
+  add('Antal portar: '+p.all+'     Utan anmärkning: '+p.good.length+'     Med brister: '+faultCount,{size:9,after:9});
+  for(const d of p.details){
+   const answered=d.points.filter(q=>first(d.answers,a=>a.item_id===q.id)?.answer).length;
+   const faults=d.answers.filter(a=>a.answer==='Brist');
+   const pending=answered<d.points.length;
+   const status=faults.length?'BRIST':pending?'EJ KLAR':'OK';
+   const categories=protocolCategories(d);
+   const faultDetails=faults.map(a=>{const q=first(items,x=>x.id===a.item_id);return (q?.label||'Kontrollpunkt')+': '+(a.description||'Bristbeskrivning saknas')});
+   // Keep each door compact; paginate rather than letting its results overflow.
+   const needed=43+categories.length*13+faultDetails.reduce((h,x)=>h+wrap(x,regular,8.3,pg.w-115).length*12+7,0);
+   if(y-needed<pg.bottom+116)newPage();
+   const top=y;
+   page.drawRectangle({x:pg.left,y:y-27,width:pg.w-pg.left-pg.right,height:27,color:pale});
+   page.drawText(safe(d.e.number+' - '+templateTitle(d.e.template_id)).slice(0,64),{x:pg.left+10,y:y-18,font:bold,size:9.5,color:navy});
+   page.drawText(status,{x:pg.w-pg.right-73,y:y-18,font:bold,size:9.5,color:faults.length?red:green});
+   y-=39;
+   for(const cat of categories){
+    add(cat.name+'  -  '+cat.status,{size:8.4,leading:13,color:cat.status==='Brist'?red:navy});
+   }
+   for(const detail of faultDetails){add(detail,{size:8.3,indent:9,leading:12,color:red,after:4});}
+   y-=10;
+   page.drawLine({start:{x:pg.left,y},end:{x:pg.w-pg.right,y},color:gray,thickness:.7});
+   y-=14;
+  }
+  add('Samtliga resultat gäller respektive port. Ej aktuellt och brister redovisas under rätt kategori.',{size:8.2,after:5});
+ }else if(industrial){
   // Printable industrial A4 report: real customer, inspections, categories and faults.
   const lineColor=rgb(.81,.86,.89),pale=rgb(.94,.97,.98),green=rgb(.08,.48,.27),red=rgb(.73,.19,.13);
   const logoBinary=Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAANQAAAAxAgMAAADfOW+6AAAADFBMVEUAAAAAWZUAWZUAWpTK29hPAAAABHRSTlMA+pobCgs74AAAA/xJREFUeNq9lk9oHFUcxz/zZja7TSbJEhKMNuhCe2jdCCPm0EMqTyrowcNAs/EfBfFopSziUWSK0qMGEZpD0FiClZ1EViykB5UHVfAQZApp9SC4hxTEBFzZ2ZqwOzsedieZSWYVevB3mXnvzef9+f2+v98bbWSJA7vrgD729Bq/T+rX9y4gvrT1j37++A818MryFU/MvSErexcedzpGw41RLWBIhrBG4AJPLdBRIUW5fdwteCdCR7hQdEORi0GYQGN7C5SidUNCgZlX30Z365r7HH+uTzF0o3zx3E0Rh/ABQ/2Ibkj4e4rbbTz7DOB1+JB3/FlqezXp+KLNIbOAIOcAMzwKj0X9o2qDWdBMQFhxItqu2FEAfD1zMObpPkAAYHiFGBUtHJ4MFcBZqJNiIg6hR17RPEDx/q3kzqNPRGKuAECv4I8UYMTk5lmgoto68JkEYNAAhEqsDBC4Mvdem8Gr47o5BpqLdh4hLgPwyGI++m7fQgB9ifa30KragfEbiGXCNcLzE10dfGUDQiYwBQR5LDlL67YUNUsR5DECNHcOgKHvJCCcNB95pW9gVIUThWjSDt232l8cOVdviAI6bCoTnDQRYNxJ9HelLF88PQ5G3S9e3s7vJKkNxwHj7vzh2dQzBIzt4Hs5Z9jaigJFYCLBTA07GTJMksHGzihNZlSGSTgJLLIopHiNyUOeR0H7hZo6g6XQsaRWsBqj0Wlmf/oetDZglA5T2rG3Vl/Gk3bw/CU69V+uPftFUGptAk/a2xD4R6IM0PEmWCG4ZXEqg169L09xp2Q9BBzTHK3MAptoybWKqeE7qnkexP5PyjjSM7iMmK/MmZ+WKlzxBpcRry91Js9dB/FBmfuXPpkT7x6lii561iVYHXY54RVdWg2XVuhCdtsl21pF/zV9h0bItBZpOwcMJHMwldpthqpuRPm2C4Sd/6KyblXDqW8h1qmTdauE65RddXyFIXeFUKVSPgRKlxb4Th0fwHc88A5U18fz6mEWDqoZ2EmtHqobkaCsoPvcT6ZY2cyDcTF9sbZ4AG3k0AAK+V67WksIQ4QJU0BmXtHEAPRyjcy8Al11T9h8qasmI1k2ir2IaGxB+Pmq9QMhiGvV4n5J39PV1dQd9jwUrvZ8F1Y5cJqGTD+XImCKeGUekBFCIMtpVMuVDHeje7rbgmZ3aKgCSK+fD9tkQbhOtNV4atj5ftS0ESb+DXQSUe5D1TNh/AJoxufY6E/dS9wLWnwOsx+lyydU8uaNNRv9qIAFNZWIRT1x5adQmZI9rGH5+y1AdZOrWXoTApW+ltHWIBsvY3Yk461/0fy0Ri7h+rzZO1kOqKdQBhiM06Cp9Vpmmw1Akgdj18TI/wOTg2f8seORrQAAAABJRU5ErkJggg=='),c=>c.charCodeAt(0));
