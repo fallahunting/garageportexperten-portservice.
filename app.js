@@ -321,44 +321,66 @@ async function generateProtocol(jobId,send){
  newPage();
  // Corporate header modeled on the offer: Garageportexperten left; protocol and customer right.
  const technician=first(table('profiles'),x=>x.user_id===p.job.finished_by)?.display_name||sys.profile.display_name;
- if(['BRF','Samfällighet'].includes(p.customer.customer_type)){
-  const green=rgb(.08,.45,.28),red=rgb(.73,.20,.16),pale=rgb(.94,.97,.98);
-  page.drawRectangle({x:0,y:pg.h-13,width:pg.w,height:13,color:blue});
-  add('GARAGEPORTEXPERTEN',{bold:true,size:18,color:blue,after:3});
-  add('SERVICEPROTOKOLL - BRF / SAMFALLIGHET',{bold:true,size:12,after:15});
-  page.drawRectangle({x:pg.left,y:y-83,width:pg.w-pg.left-pg.right,height:83,color:pale});
-  let infoY=y-16;
-  for(const txt of [p.customer.name,p.customer.address||'',p.job.service_date+'  |  Montör: '+technician]){
-   page.drawText(safe(txt).slice(0,95),{x:pg.left+12,y:infoY,font:infoY===y-16?bold:regular,size:infoY===y-16?11:9,color:navy});infoY-=24;
-  }
-  y-=106;
-  add('PORTÖVERSIKT',{bold:true,size:11,after:8});
-  const faultCount=p.details.filter(d=>d.answers.some(a=>a.answer==='Brist')).length;
-  add('Antal portar: '+p.all+'     Utan anmärkning: '+p.good.length+'     Med brister: '+faultCount,{size:9,after:9});
-  for(const d of p.details){
-   const answered=d.points.filter(q=>first(d.answers,a=>a.item_id===q.id)?.answer).length;
-   const faults=d.answers.filter(a=>a.answer==='Brist');
-   const pending=answered<d.points.length;
-   const status=faults.length?'BRIST':pending?'EJ KLAR':'OK';
-   const categories=protocolCategories(d);
-   const faultDetails=faults.map(a=>{const q=first(items,x=>x.id===a.item_id);return (q?.label||'Kontrollpunkt')+': '+(a.description||'Bristbeskrivning saknas')});
-   // Keep each door compact; paginate rather than letting its results overflow.
-   const needed=43+categories.length*13+faultDetails.reduce((h,x)=>h+wrap(x,regular,8.3,pg.w-115).length*12+7,0);
-   if(y-needed<pg.bottom+116)newPage();
-   const top=y;
-   page.drawRectangle({x:pg.left,y:y-27,width:pg.w-pg.left-pg.right,height:27,color:pale});
-   page.drawText(safe(d.e.number+' - '+templateTitle(d.e.template_id)).slice(0,64),{x:pg.left+10,y:y-18,font:bold,size:9.5,color:navy});
-   page.drawText(status,{x:pg.w-pg.right-73,y:y-18,font:bold,size:9.5,color:faults.length?red:green});
-   y-=39;
-   for(const cat of categories){
-    add(cat.name+'  -  '+cat.status,{size:8.4,leading:13,color:cat.status==='Brist'?red:navy});
+ if(['BRF','Samfällighet'].includes(p.customer.customer_type)||p.details.some(d=>String(d.e.template_id||'').startsWith('GE-VILLA-'))){
+  const lineColor=rgb(.81,.86,.89),pale=rgb(.94,.97,.98),green=rgb(.08,.48,.27),red=rgb(.73,.19,.13);
+  const isAssociation=['BRF','Samfällighet'].includes(p.customer.customer_type);
+  const logoBinary=Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAANQAAAAxAgMAAADfOW+6AAAADFBMVEUAAAAAWZUAWZUAWpTK29hPAAAABHRSTlMA+pobCgs74AAAA/xJREFUeNq9lk9oHFUcxz/zZja7TSbJEhKMNuhCe2jdCCPm0EMqTyrowcNAs/EfBfFopSziUWSK0qMGEZpD0FiClZ1EViykB5UHVfAQZApp9SC4hxTEBFzZ2ZqwOzsedieZSWYVevB3mXnvzef9+f2+v98bbWSJA7vrgD729Bq/T+rX9y4gvrT1j37++A818MryFU/MvSErexcedzpGw41RLWBIhrBG4AJPLdBRIUW5fdwteCdCR7hQdEORi0GYQGN7C5SidUNCgZlX30Z365r7HH+uTzF0o3zx3E0Rh/ABQ/2Ibkj4e4rbbTz7DOB1+JB3/FlqezXp+KLNIbOAIOcAMzwKj0X9o2qDWdBMQFhxItqu2FEAfD1zMObpPkAAYHiFGBUtHJ4MFcBZqJNiIg6hR17RPEDx/q3kzqNPRGKuAECv4I8UYMTk5lmgoto68JkEYNAAhEqsDBC4Mvdem8Gr47o5BpqLdh4hLgPwyGI++m7fQgB9ifa30KragfEbiGXCNcLzE10dfGUDQiYwBQR5LDlL67YUNUsR5DECNHcOgKHvJCCcNB95pW9gVIUThWjSDt232l8cOVdviAI6bCoTnDQRYNxJ9HelLF88PQ5G3S9e3s7vJKkNxwHj7vzh2dQzBIzt4Hs5Z9jaigJFYCLBTA07GTJMksHGzihNZlSGSTgJLLIopHiNyUOeR0H7hZo6g6XQsaRWsBqj0Wlmf/oetDZglA5T2rG3Vl/Gk3bw/CU69V+uPftFUGptAk/a2xD4R6IM0PEmWCG4ZXEqg169L09xp2Q9BBzTHK3MAptoybWKqeE7qnkexP5PyjjSM7iMmK/MmZ+WKlzxBpcRry91Js9dB/FBmfuXPpkT7x6lii561iVYHXY54RVdWg2XVuhCdtsl21pF/zV9h0bItBZpOwcMJHMwldpthqpuRPm2C4Sd/6KyblXDqW8h1qmTdauE65RddXyFIXeFUKVSPgRKlxb4Th0fwHc88A5U18fz6mEWDqoZ2EmtHqobkaCsoPvcT6ZY2cyDcTF9sbZ4AG3k0AAK+V67WksIQ4QJU0BmXtHEAPRyjcy8Al11T9h8qasmI1k2ir2IaGxB+Pmq9QMhiGvV4n5J39PV1dQd9jwUrvZ8F1Y5cJqGTD+XImCKeGUekBFCIMtpVMuVDHeje7rbgmZ3aKgCSK+fD9tkQbhOtNV4atj5ftS0ESb+DXQSUe5D1TNh/AJoxufY6E/dS9wLWnwOsx+lyydU8uaNNRv9qIAFNZWIRT1x5adQmZI9rGH5+y1AdZOrWXoTApW+ltHWIBsvY3Yk461/0fy0Ri7h+rzZO1kOqKdQBhiM06Cp9Vpmmw1Akgdj18TI/wOTg2f8seORrQAAAABJRU5ErkJggg=='),c=>c.charCodeAt(0));
+  const logo=await doc.embedPng(logoBinary);
+  page.drawImage(logo,{x:pg.left,y:pg.h-132,width:243,height:243*49/212});
+  const bx=310,bw=243,boxTop=pg.h-68,boxBottom=pg.h-151;
+  page.drawText('PROTOKOLL',{x:bx,y:pg.h-46,size:16,font:bold,color:navy});
+  page.drawRectangle({x:bx,y:boxBottom,width:bw,height:boxTop-boxBottom,borderWidth:.8,borderColor:lineColor});
+  page.drawText('KUND',{x:bx+12,y:boxTop-15,font:bold,size:7,color:blue});
+  textBlock(p.customer.name,bx+12,boxTop-28,bw-24,bold,10,navy,12);
+  page.drawText('ADRESS',{x:bx+12,y:boxTop-49,font:bold,size:7,color:blue});
+  textBlock(p.customer.address||'-',bx+12,boxTop-62,bw-24,regular,8,navy,10);
+  y=pg.h-170;
+  add('SERVICEPROTOKOLL',{bold:true,size:14,after:7});
+  add('Montör: '+technician+'                         Datum: '+p.job.service_date,{size:9,after:4});
+  const statusOf=d=>{
+   const ans=d.points.map(q=>first(d.answers,a=>a.item_id===q.id));
+   return ans.some(a=>a?.answer==='Brist')?'BRIST':ans.some(a=>!a?.answer)?'EJ KLAR':'OK';
+  };
+  const approved=p.details.filter(d=>statusOf(d)==='OK').length;
+  const failed=p.details.filter(d=>statusOf(d)==='BRIST').length;
+  add('Antal portar: '+p.all+'       Utan brister: '+approved+'       Med brister: '+failed,{size:9,after:10});
+  page.drawLine({start:{x:pg.left,y},end:{x:pg.w-pg.right,y},color:lineColor,thickness:.8});y-=19;
+  add('PORTAR UTAN ANMÄRKNING ('+approved+')',{bold:true,size:10,after:14});
+  add('PORTAR MED BRISTER ('+failed+')',{bold:true,size:10,after:12});
+  page.drawLine({start:{x:pg.left,y},end:{x:pg.w-pg.right,y},color:lineColor,thickness:.8});y-=20;
+  add('SAMMANFATTNING',{bold:true,size:12,after:7});
+  // A compact one-row-per-door summary, using the actual recorded inspection results.
+  const allGroups=[...new Set(p.details.flatMap(d=>protocolCategories(d).map(g=>g.name)))];
+  const columns=allGroups.length<=5?allGroups:[];
+  const innerWidth=pg.w-pg.left-pg.right;
+  const leftWidth=99,kindWidth=112,resultWidth=66;
+  const categoryWidth=columns.length?(innerWidth-leftWidth-kindWidth-resultWidth)/columns.length:0;
+  const headerH=23,rowH=21;
+  const cells=[{name:'PORT',width:leftWidth},{name:'PORTTYP',width:kindWidth},...columns.map(name=>({name,width:categoryWidth})),{name:'RESULTAT',width:resultWidth}];
+  const truncate=(value,width,font,size)=>{let str=safe(value);while(str&&font.widthOfTextAtSize(str,size)>width-8)str=str.slice(0,-1);return str};
+  const tableHeader=()=>{if(y<pg.bottom+155)newPage();let x=pg.left;page.drawRectangle({x,y:y-headerH,width:innerWidth,height:headerH,color:blue});for(const cell of cells){page.drawText(truncate(cell.name,cell.width,bold,7.3),{x:x+5,y:y-15,font:bold,size:7.3,color:rgb(1,1,1)});x+=cell.width;}y-=headerH;};
+  tableHeader();
+  for(const [idx,d] of p.details.entries()){
+   if(y-rowH<pg.bottom+122){newPage();tableHeader();}
+   if(idx%2===0)page.drawRectangle({x:pg.left,y:y-rowH,width:innerWidth,height:rowH,color:pale});
+   let x=pg.left;
+   const status=statusOf(d);
+   const title=templateTitle(d.e.template_id).replace(/ - .*/, '');
+   const catMap=new Map(protocolCategories(d).map(g=>[g.name,g.status]));
+   const values=[d.e.number,title,...columns.map(name=>catMap.get(name)||'-'),status];
+   values.forEach((v,i)=>{const c=cells[i],size=i<2?8:7.4,font=i===0?bold:regular,color=v==='BRIST'?red:v==='OK'?green:navy;page.drawText(truncate(v,c.width,font,size),{x:x+5,y:y-14,font,size,color});x+=c.width;});
+   y-=rowH;
+   if(columns.length===0){
+    const cats=protocolCategories(d).map(g=>g.name+': '+g.status).join('   |   ');
+    add(cats,{size:7,leading:10,after:3});
    }
-   for(const detail of faultDetails){add(detail,{size:8.3,indent:9,leading:12,color:red,after:4});}
-   y-=10;
-   page.drawLine({start:{x:pg.left,y},end:{x:pg.w-pg.right,y},color:gray,thickness:.7});
-   y-=14;
   }
-  add('Samtliga resultat gäller respektive port. Ej aktuellt och brister redovisas under rätt kategori.',{size:8.2,after:5});
+  y-=18;page.drawLine({start:{x:pg.left,y},end:{x:pg.w-pg.right,y},color:lineColor,thickness:.8});y-=18;
+  add('BRISTER OCH ANMÄRKNINGAR',{bold:true,size:11,after:8});
+  const faults=p.details.flatMap(d=>d.answers.filter(a=>a.answer==='Brist').map(a=>({door:d.e.number,point:first(d.points,q=>q.id===a.item_id)?.label||'Kontrollpunkt',description:a.description||'Bristbeskrivning saknas'})));
+  if(!faults.length)add('Inga registrerade brister.',{size:9,after:9});
+  for(const fault of faults){if(y<pg.bottom+157)newPage();add(fault.door+' - '+fault.point,{bold:true,size:8.7,color:red,after:2});add(fault.description,{size:8.5,after:8});}
+  y-=10;
  }else if(industrial){
   // Printable industrial A4 report: real customer, inspections, categories and faults.
   const lineColor=rgb(.81,.86,.89),pale=rgb(.94,.97,.98),green=rgb(.08,.48,.27),red=rgb(.73,.19,.13);
