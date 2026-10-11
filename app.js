@@ -321,10 +321,10 @@ async function generateProtocol(jobId,send){
  if(industrial){
   // Printable industrial A4 report: real customer, inspections, categories and faults.
   const lineColor=rgb(.81,.86,.89),pale=rgb(.94,.97,.98),green=rgb(.08,.48,.27),red=rgb(.73,.19,.13);
-  const logoY=pg.h-90;
-  for(let i=0;i<3;i++)page.drawRectangle({x:pg.left,y:logoY-i*18,width:57,height:14,color:blue});
-  page.drawText('GARAGEPORT',{x:pg.left+68,y:logoY-2,size:16,font:regular,color:blue});
-  page.drawText('EXPERTEN',{x:pg.left+68,y:logoY-23,size:21,font:bold,color:blue});
+  const logoBinary=Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAANQAAAAxAgMAAADfOW+6AAAADFBMVEUAAAAAWZUAWZUAWpTK29hPAAAABHRSTlMA+pobCgs74AAAA/xJREFUeNq9lk9oHFUcxz/zZja7TSbJEhKMNuhCe2jdCCPm0EMqTyrowcNAs/EfBfFopSziUWSK0qMGEZpD0FiClZ1EViykB5UHVfAQZApp9SC4hxTEBFzZ2ZqwOzsedieZSWYVevB3mXnvzef9+f2+v98bbWSJA7vrgD729Bq/T+rX9y4gvrT1j37++A818MryFU/MvSErexcedzpGw41RLWBIhrBG4AJPLdBRIUW5fdwteCdCR7hQdEORi0GYQGN7C5SidUNCgZlX30Z365r7HH+uTzF0o3zx3E0Rh/ABQ/2Ibkj4e4rbbTz7DOB1+JB3/FlqezXp+KLNIbOAIOcAMzwKj0X9o2qDWdBMQFhxItqu2FEAfD1zMObpPkAAYHiFGBUtHJ4MFcBZqJNiIg6hR17RPEDx/q3kzqNPRGKuAECv4I8UYMTk5lmgoto68JkEYNAAhEqsDBC4Mvdem8Gr47o5BpqLdh4hLgPwyGI++m7fQgB9ifa30KragfEbiGXCNcLzE10dfGUDQiYwBQR5LDlL67YUNUsR5DECNHcOgKHvJCCcNB95pW9gVIUThWjSDt232l8cOVdviAI6bCoTnDQRYNxJ9HelLF88PQ5G3S9e3s7vJKkNxwHj7vzh2dQzBIzt4Hs5Z9jaigJFYCLBTA07GTJMksHGzihNZlSGSTgJLLIopHiNyUOeR0H7hZo6g6XQsaRWsBqj0Wlmf/oetDZglA5T2rG3Vl/Gk3bw/CU69V+uPftFUGptAk/a2xD4R6IM0PEmWCG4ZXEqg169L09xp2Q9BBzTHK3MAptoybWKqeE7qnkexP5PyjjSM7iMmK/MmZ+WKlzxBpcRry91Js9dB/FBmfuXPpkT7x6lii561iVYHXY54RVdWg2XVuhCdtsl21pF/zV9h0bItBZpOwcMJHMwldpthqpuRPm2C4Sd/6KyblXDqW8h1qmTdauE65RddXyFIXeFUKVSPgRKlxb4Th0fwHc88A5U18fz6mEWDqoZ2EmtHqobkaCsoPvcT6ZY2cyDcTF9sbZ4AG3k0AAK+V67WksIQ4QJU0BmXtHEAPRyjcy8Al11T9h8qasmI1k2ir2IaGxB+Pmq9QMhiGvV4n5J39PV1dQd9jwUrvZ8F1Y5cJqGTD+XImCKeGUekBFCIMtpVMuVDHeje7rbgmZ3aKgCSK+fD9tkQbhOtNV4atj5ftS0ESb+DXQSUe5D1TNh/AJoxufY6E/dS9wLWnwOsx+lyydU8uaNNRv9qIAFNZWIRT1x5adQmZI9rGH5+y1AdZOrWXoTApW+ltHWIBsvY3Yk461/0fy0Ri7h+rzZO1kOqKdQBhiM06Cp9Vpmmw1Akgdj18TI/wOTg2f8seORrQAAAABJRU5ErkJggg=='),c=>c.charCodeAt(0));
+  const actualLogo=await doc.embedPng(logoBinary);
+  // Preserve the exact proportions of the uploaded company logo (212 x 49).
+  page.drawImage(actualLogo,{x:pg.left,y:pg.h-132,width:243,height:243*49/212});
   const bx=310,bw=243,top=pg.h-68,bottom=pg.h-151;
   page.drawText('PROTOKOLL',{x:bx,y:pg.h-46,size:16,font:bold,color:navy});
   page.drawRectangle({x:bx,y:bottom,width:bw,height:top-bottom,borderWidth:.8,borderColor:lineColor});
