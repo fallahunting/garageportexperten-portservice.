@@ -527,10 +527,9 @@ async function handleAction(a,btn){
  if(a==='edit-customer'){modal(customerForm(customerBy(sys.selectedCustomer)));return}
  if(a==='delete-customer'){
   const c=customerBy(sys.selectedCustomer);if(!c)return;
-  if(sys.profile?.role!=='admin'){notify('Endast administratör kan radera kunder.',true);return;}
   const n=table('equipment').filter(e=>e.customer_id===c.id).length;
   const jobs=jobsFor(c.id).length;
-  modal('<h2>Ta bort kund permanent</h2><p><strong>'+esc(c.name)+'</strong></p><p>Detta raderar kunden, samtliga '+n+' objekt, '+jobs+' serviceuppdrag, kontrollsvar och brister. Det går inte att ångra.</p><p class="small muted">Skriv RADERA för att bekräfta. Radering kräver administratörsinloggning.</p><input type="text" id="delete-customer-confirmation" autocomplete="off" placeholder="Skriv RADERA" aria-label="Bekräfta permanent radering"><div class="toolbar" style="margin-top:18px"><button type="button" class="action secondary" data-action="close-modal">Avbryt</button><button type="button" class="action" style="background:#ae2727;color:white" data-action="confirm-delete-customer">Radera permanent</button></div>');
+  modal('<h2>Ta bort kund permanent</h2><p><strong>'+esc(c.name)+'</strong></p><p>Detta raderar kunden, samtliga '+n+' objekt, '+jobs+' serviceuppdrag, kontrollsvar och brister. Det går inte att ångra.</p><p class="small muted">Skriv RADERA för att bekräfta. Radering kräver att du är inloggad i montörskontot.</p><input type="text" id="delete-customer-confirmation" autocomplete="off" placeholder="Skriv RADERA" aria-label="Bekräfta permanent radering"><div class="toolbar" style="margin-top:18px"><button type="button" class="action secondary" data-action="close-modal">Avbryt</button><button type="button" class="action" style="background:#ae2727;color:white" data-action="confirm-delete-customer">Radera permanent</button></div>');
   return;
  }
  if(a==='confirm-delete-customer'){
@@ -538,7 +537,6 @@ async function handleAction(a,btn){
   const confirmation=$('#delete-customer-confirmation')?.value.trim();
   if(confirmation!=='RADERA'){notify('Skriv RADERA exakt för att bekräfta.',true);return;}
   if(!live){notify('Permanent radering stöds bara mot den riktiga databasen.',true);return;}
-  if(sys.profile?.role!=='admin'){notify('Endast administratör kan radera kunder.',true);return;}
   const btn=document.querySelector('[data-action="confirm-delete-customer"]');if(btn){btn.disabled=true;btn.textContent='Raderar…';}
   try{
    const {data,error}=await client.rpc('delete_customer_permanently',{p_customer_id:c.id,p_confirmation:confirmation});
