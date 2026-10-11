@@ -325,7 +325,7 @@ async function generateProtocol(jobId,send){
   for(let i=0;i<3;i++)page.drawRectangle({x:pg.left,y:logoY-i*18,width:57,height:14,color:blue});
   page.drawText('GARAGEPORT',{x:pg.left+68,y:logoY-2,size:16,font:regular,color:blue});
   page.drawText('EXPERTEN',{x:pg.left+68,y:logoY-23,size:21,font:bold,color:blue});
-  const bx=310,bw=243,top=pg.h-68,bottom=pg.h-220;
+  const bx=310,bw=243,top=pg.h-68,bottom=pg.h-151;
   page.drawText('PROTOKOLL',{x:bx,y:pg.h-46,size:16,font:bold,color:navy});
   page.drawRectangle({x:bx,y:bottom,width:bw,height:top-bottom,borderWidth:.8,borderColor:lineColor});
   const label=(name,value,x,yy,width)=>{
@@ -333,10 +333,9 @@ async function generateProtocol(jobId,send){
    const lines=wrap(value||'-',regular,9,width);
    lines.slice(0,2).forEach((line,k)=>page.drawText(line,{x,y:yy-13-k*11,size:9,font:regular,color:navy}));
   };
-  label('KUND',safe(p.customer.name),bx+12,top-16,bw-24);
-  label('ADRESS',safe(p.customer.address),bx+12,top-51,bw-24);
-  label('KONTAKT',safe(p.customer.contact||'-'),bx+12,top-99,103);
-  label('SERVICEDATUM',safe(p.job.service_date),bx+133,top-99,103);
+  label('KUND',safe(p.customer.name),bx+12,top-13,bw-24);
+  label('ADRESS',safe(p.customer.address),bx+12,top-46,bw-24);
+  page.drawText('Kontakt: '+safe(p.customer.contact||'-')+'   |   '+safe(p.job.service_date),{x:bx+12,y:bottom+10,font:regular,size:8,color:navy});
   y=bottom-35;
   add('SERVICEPROTOKOLL',{bold:true,size:14,after:8});
   page.drawText('Montör: '+safe(technician),{x:pg.left,y:y+4,font:regular,size:9,color:navy});
@@ -365,9 +364,9 @@ async function generateProtocol(jobId,send){
    const failing=groups.some(g=>g.status==='Brist');
    const unresolved=groups.some(g=>g.status==='Ej kontrollerad');
    const state=failing?'BRISTER':unresolved?'EJ KLAR':'OK';
-   const colW=(pg.w-pg.left-pg.right-12)/2;
-   const pairs=[];for(let k=0;k<groups.length;k+=2)pairs.push(groups.slice(k,k+2));
-   const lineRows=pairs.map(pair=>Math.max(...pair.map(g=>wrap(g.name+': '+g.status,regular,8,colW-14).length)));
+   const colW=(pg.w-pg.left-pg.right-20)/3;
+   const pairs=[];for(let k=0;k<groups.length;k+=3)pairs.push(groups.slice(k,k+3));
+   const lineRows=pairs.map(pair=>Math.max(...pair.map(g=>wrap(g.name+': '+g.status,regular,7.5,colW-14).length)));
    const contentHeight=lineRows.reduce((h,n)=>h+n*11+4,0);
    const headerHeight=27,boxHeight=headerHeight+contentHeight+7;
    // Do not split a port summary across pages unless it is taller than a page.
@@ -382,8 +381,8 @@ async function generateProtocol(jobId,send){
    pairs.forEach((pair,idx)=>{
     const h=lineRows[idx]*11+4;
     pair.forEach((g,j)=>{
-     const xx=x+11+j*(colW+12),lines=wrap(g.name+': '+g.status,regular,8,colW-14);
-     lines.forEach((line,k)=>page.drawText(line,{x:xx,y:yy-k*11,font:g.status==='Brist'?bold:regular,size:8,color:g.status==='Brist'?red:navy}));
+     const xx=x+11+j*(colW+10),lines=wrap(g.name+': '+g.status,regular,7.5,colW-14);
+     lines.forEach((line,k)=>page.drawText(line,{x:xx,y:yy-k*11,font:g.status==='Brist'?bold:regular,size:7.5,color:g.status==='Brist'?red:navy}));
     });
     yy-=h;
    });
