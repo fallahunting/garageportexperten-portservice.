@@ -295,6 +295,8 @@ function buildPrint(jobId){const p=pdfLines(jobId),line=(a)=>a.map(x=>esc(x.numb
 async function generateProtocol(jobId,send){
  const p=pdfLines(jobId);
  const {PDFDocument,StandardFonts,rgb}=await import('https://esm.sh/pdf-lib@1.17.1');
+ // Use the compact A4 industrial report only for industrial equipment templates.
+ const industrial=p.details.length>0&&p.details.every(d=>!String(d.e.template_id||'').startsWith('GE-VILLA-'));
  const doc=await PDFDocument.create();
  const regular=await doc.embedFont(StandardFonts.Helvetica),bold=await doc.embedFont(StandardFonts.HelveticaBold);
  const pg={w:595,h:842,left:42,right:42,top:38,bottom:43};
@@ -321,7 +323,7 @@ async function generateProtocol(jobId,send){
  page.drawText('EXPERTEN',{x:124,y:logoY-28,size:21,font:bold,color:blue});
  page.drawText('PROTOKOLL',{x:329,y:pg.h-48,size:16,font:bold,color:navy});
  // Entire customer and service identification in the right-hand information box.
- const boxX=326,boxW=224,boxTop=pg.h-69,boxBottom=pg.h-338;
+ const boxX=326,boxW=224,boxTop=pg.h-69,boxBottom=industrial?pg.h-217:pg.h-338;
  page.drawRectangle({x:boxX,y:boxBottom,width:boxW,height:boxTop-boxBottom,borderWidth:1,borderColor:gray});
  let infoY=boxTop-19;
  const detail=(label,value)=>{
@@ -335,11 +337,14 @@ async function generateProtocol(jobId,send){
  detail('Kund',p.customer.name);
  detail('Adress',p.customer.address);
  detail('Kontaktperson',p.customer.contact);
- detail('Telefon',p.customer.phone);
- detail('E-post',p.customer.email);
+ if(!industrial){detail('Telefon',p.customer.phone);detail('E-post',p.customer.email);}
  detail('Servicedatum',p.job.service_date);
- detail('Montör',technician);
+ if(!industrial)detail('Montör',technician);
  y=boxBottom-25;
+ if(industrial){
+  add('SERVICEPROTOKOLL',{bold:true,size:14,after:4});
+  add('Montör: '+technician,{size:9,after:2});
+ }
  add('Antal portar/objekt: '+p.all+'   Utan brister: '+p.good.length+'   Med brister: '+p.bad.length,{after:10});
  heading('OBJEKT UTAN ANMÄRKNING ('+p.good.length+')');
  add(p.good.map(x=>x.number).join(', ')||'Inga',{after:11});
@@ -349,15 +354,34 @@ async function generateProtocol(jobId,send){
   for(const fault of item.failed){const point=first(items,x=>x.id===fault.item_id);add((point?.label||'Kontrollpunkt')+' - Brist',{bold:true,size:10});add(fault.description||'Bristbeskrivning saknas',{indent:12,after:4})}
   y-=5;
  }
- heading('KONTROLLRESULTAT PER KATEGORI');
+ heading(industrial?'SAMMANFATTNING':'KONTROLLRESULTAT PER KATEGORI');
  for(const d of p.details){
-  if(y<pg.bottom+85)newPage();
-  add(d.e.number+' - '+templateTitle(d.e.template_id),{bold:true,size:11});
-  add([d.e.manufacturer,d.e.model,d.e.controller].filter(Boolean).join(' / '),{size:9,after:4});
-  for(const group of protocolCategories(d)){
-   add(group.name+' : '+group.status,{size:9,bold:group.status==='Brist',leading:12});
+  const groups=protocolCategories(d);
+  if(!industrial){
+   if(y<pg.bottom+85)newPage();
+   add(d.e.number+' - '+templateTitle(d.e.template_id),{bold:true,size:11});
+   add([d.e.manufacturer,d.e.model,d.e.controller].filter(Boolean).join(' / '),{size:9,after:4});
+   for(const group of groups)add(group.name+' : '+group.status,{size:9,bold:group.status==='Brist',leading:12});
+   y-=10;continue;
   }
-  y-=10;
+  // Print a compact, side-by-side category summary; each door stays identifiable.
+  if(y<pg.bottom+68)newPage();
+  const portStatus=groups.some(g=>g.status==='Brist')?'BRISTER':groups.some(g=>g.status==='Ej kontrollerad')?'EJ KLAR':'OK';
+  add(d.e.number+' – '+templateTitle(d.e.template_id)+'   '+portStatus,{bold:true,size:10,after:5});
+  const gap=10,colW=(pg.w-pg.left-pg.right-gap)/2;
+  const rows=[];
+  for(let k=0;k<groups.length;k+=2)rows.push(groups.slice(k,k+2));
+  for(const pair of rows){
+   const cellLines=pair.map(g=>wrap(g.name+': '+g.status,regular,8.4,colW-7));
+   const height=Math.max(...cellLines.map(x=>x.length))*12+5;
+   if(y<pg.bottom+118+height)newPage();
+   pair.forEach((g,j)=>{
+    const x=pg.left+j*(colW+gap),lines=cellLines[j];
+    lines.forEach((line,k)=>page.drawText(line,{x,y:y-k*11,size:8.4,font:g.status==='Brist'?bold:regular,color:navy}));
+   });
+   y-=height;
+  }
+  y-=9;
  }
  // Company information belongs at the bottom of the LAST page only.
  const footerHeight=106;
@@ -368,7 +392,7 @@ async function generateProtocol(jobId,send){
  textBlock('Port & Dörrexperten i Östergötland AB',pg.left,fy,205,bold,9,navy,12);
  textBlock('Skäggebyvägen 13\n612 44 Finspång\nOrg.nr 556963-1103',pg.left,fy-15,165,regular,8.5,navy,12);
  textBlock('Telefon 010-601 58 00\nMomsreg.nr SE556963110301\nBankgiro 5134-4521',239,fy,166,regular,8.5,navy,12);
- textBlock('www.garageportexperten.se\nfinspang@garageportexperten.se\nGodkänd för F-skatt',416,fy,145,regular,8.2,navy,12);
+ textBlock('garageportexperten.se\nfinspang@garageportexperten.se\nGodkänd för F-skatt',414,fy,139,regular,7.6,navy,12);
  const bytes=await doc.save();const blob=new Blob([bytes],{type:'application/pdf'});
  if(!live){const u=URL.createObjectURL(blob);const a=document.createElement('a');a.href=u;a.download='GPE_protokoll_ny_layout_'+p.job.service_date+'.pdf';a.click();setTimeout(()=>URL.revokeObjectURL(u),30000);return;}
  const path=org()+'/'+jobId+'/serviceprotokoll-'+new Date().toISOString().replaceAll(':','-')+'-'+id()+'.pdf';
