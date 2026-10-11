@@ -317,71 +317,102 @@ async function generateProtocol(jobId,send){
  function heading(v){if(y<pg.bottom+65)newPage();y-=8;add(v,{bold:true,size:12,after:5})}
  newPage();
  // Corporate header modeled on the offer: Garageportexperten left; protocol and customer right.
- const logoY=pg.h-69;
- for(let i=0;i<3;i++)page.drawRectangle({x:48,y:logoY-i*21,width:66,height:16,color:blue});
- page.drawText('GARAGEPORT',{x:124,y:logoY-4,size:17,font:regular,color:blue});
- page.drawText('EXPERTEN',{x:124,y:logoY-28,size:21,font:bold,color:blue});
- page.drawText('PROTOKOLL',{x:329,y:pg.h-48,size:16,font:bold,color:navy});
- // Entire customer and service identification in the right-hand information box.
- const boxX=326,boxW=224,boxTop=pg.h-69,boxBottom=industrial?pg.h-217:pg.h-338;
- page.drawRectangle({x:boxX,y:boxBottom,width:boxW,height:boxTop-boxBottom,borderWidth:1,borderColor:gray});
- let infoY=boxTop-19;
- const detail=(label,value)=>{
-  if(value===undefined||value===null||String(value).trim()==='')return;
-  const lines=wrap(String(value),regular,9.1,boxW-28);
-  page.drawText(safe(label),{x:boxX+13,y:infoY,size:8.5,font:bold,color:navy});infoY-=13;
-  for(const line of lines){page.drawText(line||' ',{x:boxX+13,y:infoY,size:9.1,font:regular,color:navy});infoY-=12;}
-  infoY-=5;
- };
  const technician=first(table('profiles'),x=>x.user_id===p.job.finished_by)?.display_name||sys.profile.display_name;
- detail('Kund',p.customer.name);
- detail('Adress',p.customer.address);
- detail('Kontaktperson',p.customer.contact);
- if(!industrial){detail('Telefon',p.customer.phone);detail('E-post',p.customer.email);}
- detail('Servicedatum',p.job.service_date);
- if(!industrial)detail('Montör',technician);
- y=boxBottom-25;
  if(industrial){
-  add('SERVICEPROTOKOLL',{bold:true,size:14,after:4});
-  add('Montör: '+technician,{size:9,after:2});
- }
- add('Antal portar/objekt: '+p.all+'   Utan brister: '+p.good.length+'   Med brister: '+p.bad.length,{after:10});
- heading('OBJEKT UTAN ANMÄRKNING ('+p.good.length+')');
- add(p.good.map(x=>x.number).join(', ')||'Inga',{after:11});
- heading('OBJEKT MED BRISTER ('+p.bad.length+')');
- if(!p.bad.length)add('Inga registrerade brister.',{after:7});
- for(const item of p.bad){add(item.e.number,{bold:true,size:11,after:3});
-  for(const fault of item.failed){const point=first(items,x=>x.id===fault.item_id);add((point?.label||'Kontrollpunkt')+' - Brist',{bold:true,size:10});add(fault.description||'Bristbeskrivning saknas',{indent:12,after:4})}
-  y-=5;
- }
- heading(industrial?'SAMMANFATTNING':'KONTROLLRESULTAT PER KATEGORI');
- for(const d of p.details){
-  const groups=protocolCategories(d);
-  if(!industrial){
-   if(y<pg.bottom+85)newPage();
-   add(d.e.number+' - '+templateTitle(d.e.template_id),{bold:true,size:11});
-   add([d.e.manufacturer,d.e.model,d.e.controller].filter(Boolean).join(' / '),{size:9,after:4});
-   for(const group of groups)add(group.name+' : '+group.status,{size:9,bold:group.status==='Brist',leading:12});
-   y-=10;continue;
+  // Printable industrial A4 report: real customer, inspections, categories and faults.
+  const lineColor=rgb(.81,.86,.89),pale=rgb(.94,.97,.98),green=rgb(.08,.48,.27),red=rgb(.73,.19,.13);
+  const logoY=pg.h-90;
+  for(let i=0;i<3;i++)page.drawRectangle({x:pg.left,y:logoY-i*18,width:57,height:14,color:blue});
+  page.drawText('GARAGEPORT',{x:pg.left+68,y:logoY-2,size:16,font:regular,color:blue});
+  page.drawText('EXPERTEN',{x:pg.left+68,y:logoY-23,size:21,font:bold,color:blue});
+  const bx=310,bw=243,top=pg.h-68,bottom=pg.h-220;
+  page.drawText('PROTOKOLL',{x:bx,y:pg.h-46,size:16,font:bold,color:navy});
+  page.drawRectangle({x:bx,y:bottom,width:bw,height:top-bottom,borderWidth:.8,borderColor:lineColor});
+  const label=(name,value,x,yy,width)=>{
+   page.drawText(name,{x,y:yy,size:7.5,font:bold,color:blue});
+   const lines=wrap(value||'-',regular,9,width);
+   lines.slice(0,2).forEach((line,k)=>page.drawText(line,{x,y:yy-13-k*11,size:9,font:regular,color:navy}));
+  };
+  label('KUND',safe(p.customer.name),bx+12,top-16,bw-24);
+  label('ADRESS',safe(p.customer.address),bx+12,top-51,bw-24);
+  label('KONTAKT',safe(p.customer.contact||'-'),bx+12,top-99,103);
+  label('SERVICEDATUM',safe(p.job.service_date),bx+133,top-99,103);
+  y=bottom-35;
+  add('SERVICEPROTOKOLL',{bold:true,size:14,after:8});
+  page.drawText('Montör: '+safe(technician),{x:pg.left,y:y+4,font:regular,size:9,color:navy});
+  const totals='Antal objekt: '+p.all+'   Utan brister: '+p.good.length+'   Med brister: '+p.bad.length;
+  page.drawText(safe(totals),{x:299,y:y+4,font:regular,size:9,color:navy});
+  y-=16;
+  page.drawLine({start:{x:pg.left,y},end:{x:pg.w-pg.right,y},color:lineColor,thickness:.7});
+  y-=16;
+  add('OBJEKT UTAN ANMÄRKNING ('+p.good.length+')',{bold:true,size:10,after:4});
+  add(p.good.map(x=>x.number).join(', ')||'Inga',{size:9,after:13});
+  add('OBJEKT MED BRISTER ('+p.bad.length+')',{bold:true,size:10,after:4});
+  if(!p.bad.length)add('Inga registrerade brister.',{size:9,after:9});
+  for(const item of p.bad){
+   add(item.e.number,{bold:true,size:9,after:2});
+   for(const fault of item.failed){
+    const point=first(items,x=>x.id===fault.item_id);
+    add((point?.label||'Kontrollpunkt')+': '+(fault.description||'Beskrivning saknas'),{size:8.5,indent:8,after:3});
+   }
   }
-  // Print a compact, side-by-side category summary; each door stays identifiable.
-  if(y<pg.bottom+68)newPage();
-  const portStatus=groups.some(g=>g.status==='Brist')?'BRISTER':groups.some(g=>g.status==='Ej kontrollerad')?'EJ KLAR':'OK';
-  add(d.e.number+' – '+templateTitle(d.e.template_id)+'   '+portStatus,{bold:true,size:10,after:5});
-  const gap=10,colW=(pg.w-pg.left-pg.right-gap)/2;
-  const rows=[];
-  for(let k=0;k<groups.length;k+=2)rows.push(groups.slice(k,k+2));
-  for(const pair of rows){
-   const cellLines=pair.map(g=>wrap(g.name+': '+g.status,regular,8.4,colW-7));
-   const height=Math.max(...cellLines.map(x=>x.length))*12+5;
-   if(y<pg.bottom+118+height)newPage();
-   pair.forEach((g,j)=>{
-    const x=pg.left+j*(colW+gap),lines=cellLines[j];
-    lines.forEach((line,k)=>page.drawText(line,{x,y:y-k*11,size:8.4,font:g.status==='Brist'?bold:regular,color:navy}));
+  y-=6;
+  page.drawLine({start:{x:pg.left,y},end:{x:pg.w-pg.right,y},color:lineColor,thickness:.7});
+  y-=21;
+  add('SAMMANFATTNING',{bold:true,size:12,after:8});
+  for(const d of p.details){
+   const groups=protocolCategories(d);
+   const failing=groups.some(g=>g.status==='Brist');
+   const unresolved=groups.some(g=>g.status==='Ej kontrollerad');
+   const state=failing?'BRISTER':unresolved?'EJ KLAR':'OK';
+   const colW=(pg.w-pg.left-pg.right-12)/2;
+   const pairs=[];for(let k=0;k<groups.length;k+=2)pairs.push(groups.slice(k,k+2));
+   const lineRows=pairs.map(pair=>Math.max(...pair.map(g=>wrap(g.name+': '+g.status,regular,8,colW-14).length)));
+   const contentHeight=lineRows.reduce((h,n)=>h+n*11+4,0);
+   const headerHeight=27,boxHeight=headerHeight+contentHeight+7;
+   // Do not split a port summary across pages unless it is taller than a page.
+   if(y-boxHeight<pg.bottom+119)newPage();
+   const x=pg.left,w=pg.w-pg.left-pg.right;
+   page.drawRectangle({x,y:y-headerHeight,width:w,height:headerHeight,color:pale,borderWidth:.6,borderColor:lineColor});
+   const title=safe(d.e.number+' - '+templateTitle(d.e.template_id));
+   const clipped=wrap(title,bold,9.2,w-116)[0]||'';
+   page.drawText(clipped,{x:x+11,y:y-17,font:bold,size:9.2,color:navy});
+   page.drawText(state,{x:x+w-(state==='BRISTER'?61:state==='EJ KLAR'?58:27),y:y-17,font:bold,size:9,color:failing?red:unresolved?navy:green});
+   let yy=y-headerHeight-16;
+   pairs.forEach((pair,idx)=>{
+    const h=lineRows[idx]*11+4;
+    pair.forEach((g,j)=>{
+     const xx=x+11+j*(colW+12),lines=wrap(g.name+': '+g.status,regular,8,colW-14);
+     lines.forEach((line,k)=>page.drawText(line,{x:xx,y:yy-k*11,font:g.status==='Brist'?bold:regular,size:8,color:g.status==='Brist'?red:navy}));
+    });
+    yy-=h;
    });
-   y-=height;
+   page.drawRectangle({x,y:y-boxHeight,width:w,height:boxHeight,borderWidth:.6,borderColor:lineColor});
+   y-=boxHeight+13;
   }
-  y-=9;
+ }else{
+  const logoY=pg.h-69;
+  for(let i=0;i<3;i++)page.drawRectangle({x:48,y:logoY-i*21,width:66,height:16,color:blue});
+  page.drawText('GARAGEPORT',{x:124,y:logoY-4,size:17,font:regular,color:blue});
+  page.drawText('EXPERTEN',{x:124,y:logoY-28,size:21,font:bold,color:blue});
+  page.drawText('PROTOKOLL',{x:329,y:pg.h-48,size:16,font:bold,color:navy});
+  const boxX=326,boxW=224,boxTop=pg.h-69,boxBottom=pg.h-338;
+  page.drawRectangle({x:boxX,y:boxBottom,width:boxW,height:boxTop-boxBottom,borderWidth:1,borderColor:gray});
+  let infoY=boxTop-19;
+  for(const [name,value] of [['Kund',p.customer.name],['Adress',p.customer.address],['Kontaktperson',p.customer.contact],['Telefon',p.customer.phone],['E-post',p.customer.email],['Servicedatum',p.job.service_date],['Montör',technician]]){
+   if(!value)continue;
+   page.drawText(safe(name),{x:boxX+13,y:infoY,font:bold,size:8.5,color:navy});infoY-=13;
+   for(const line of wrap(value,regular,9.1,boxW-28)){page.drawText(line,{x:boxX+13,y:infoY,font:regular,size:9.1,color:navy});infoY-=12}infoY-=5;
+  }
+  y=boxBottom-25;
+  add('Antal objekt: '+p.all+'   Utan brister: '+p.good.length+'   Med brister: '+p.bad.length,{after:10});
+  heading('OBJEKT UTAN ANMÄRKNING ('+p.good.length+')');
+  add(p.good.map(x=>x.number).join(', ')||'Inga',{after:11});
+  heading('OBJEKT MED BRISTER ('+p.bad.length+')');
+  if(!p.bad.length)add('Inga registrerade brister.',{after:7});
+  for(const item of p.bad){add(item.e.number,{bold:true,size:11,after:3});for(const fault of item.failed){const point=first(items,x=>x.id===fault.item_id);add((point?.label||'Kontrollpunkt')+' - Brist',{bold:true,size:10});add(fault.description||'Bristbeskrivning saknas',{indent:12,after:4})}}
+  heading('KONTROLLRESULTAT PER KATEGORI');
+  for(const d of p.details){if(y<pg.bottom+85)newPage();add(d.e.number+' - '+templateTitle(d.e.template_id),{bold:true,size:11});for(const group of protocolCategories(d))add(group.name+' : '+group.status,{size:9,leading:12});y-=10}
  }
  // Company information belongs at the bottom of the LAST page only.
  const footerHeight=106;
