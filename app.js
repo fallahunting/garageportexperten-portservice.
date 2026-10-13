@@ -239,13 +239,28 @@ function serviceTemplateOptions(selected){
   '<optgroup label="'+esc(heading)+'">'+options.filter(([id])=>known.has(id)).map(([id,label])=>
    '<option value="'+esc(id)+'" '+(id===selected?'selected':'')+'>'+esc(label)+'</option>').join('')+'</optgroup>').join('');
 }
-function isDockTemplate(templateId){return /lastbrygga|GE-LBH|GE-LBM/i.test(String(templateId||'')+' '+templateTitle(templateId||''));}
+function catalogTypeForTemplate(templateId){
+ const name=String(templateTitle(templateId)||'').toLowerCase(),id=String(templateId||'').toLowerCase();
+ if(/lastbrygga|lastbrygg|ge-lbh|ge-lbm/.test(name+' '+id))return 'lastbrygga';
+ if(/vikport|ge-vik/.test(name+' '+id))return 'vikport';
+ if(/rullport|ge-rul/.test(name+' '+id))return 'rullport';
+ if(/snabbrullport|ge-snr/.test(name+' '+id))return 'snabbrullport';
+ if(/takskjutport|takskjut|ge-ind-tak/.test(name+' '+id))return 'takskjutport';
+ if(/slagport|ge-slp/.test(name+' '+id))return 'slagport';
+ if(/vipport|ge-vip/.test(name+' '+id))return 'vipport';
+ if(/skjutgrind|ge-gsk/.test(name+' '+id))return 'skjutgrind';
+ if(/slaggrind|ge-gsg/.test(name+' '+id))return 'slaggrind';
+ return '';
+}
 function catalogDatalist(category,manufacturer='',templateId=''){
- const dock=isDockTemplate(templateId);
- const rows=table('equipment_catalog').filter(r=>r.category===category&&(!manufacturer||r.manufacturer===manufacturer)&&(category!=='model'||(dock?r.equipment_type==='lastbrygga':r.equipment_type!=='lastbrygga')));
+ const type=catalogTypeForTemplate(templateId);
+ const rows=table('equipment_catalog').filter(r=>r.category===category&&(!manufacturer||r.manufacturer.toLowerCase()===manufacturer.toLowerCase())&&(category!=='model'||(type?r.equipment_type===type:!r.equipment_type)));
  return [...new Set(rows.map(r=>r.name))].sort((a,b)=>a.localeCompare(b,'sv')).map(v=>'<option value="'+esc(v)+'"></option>').join('');
 }
-function catalogManufacturers(templateId=''){const dock=isDockTemplate(templateId);return [...new Set(table('equipment_catalog').filter(r=>r.category==='model'&&(dock?r.equipment_type==='lastbrygga':r.equipment_type!=='lastbrygga')).map(r=>r.manufacturer))].sort((a,b)=>a.localeCompare(b,'sv'));}
+function catalogManufacturers(templateId=''){
+ const type=catalogTypeForTemplate(templateId);
+ return [...new Set(table('equipment_catalog').filter(r=>r.category==='model'&&(type?r.equipment_type===type:!r.equipment_type)).map(r=>r.manufacturer))].sort((a,b)=>a.localeCompare(b,'sv'));
+}
 function refreshCatalogInputs(){
  const form=document.getElementById('equipmentform');if(!form)return;
  const brand=form.elements.manufacturer?.value.trim();
@@ -658,7 +673,7 @@ async function handleSubmit(ev){const form=ev.target;if(!['loginform','customerf
     const entries=[['model',rec.manufacturer,rec.model],['motor',rec.manufacturer,rec.motor],['controller',rec.manufacturer,rec.controller]];
     for(const [category,manufacturer,name] of entries){
      if(!manufacturer||!name||existing.some(x=>x.category===category&&x.manufacturer.toLowerCase()===manufacturer.toLowerCase()&&x.name.toLowerCase()===name.toLowerCase()))continue;
-     const {error}=await client.from('equipment_catalog').upsert({category,manufacturer,name,...(category==='model'&&isDockTemplate(rec.template_id)?{equipment_type:'lastbrygga'}:{})},{onConflict:'category,manufacturer,name'});
+     const {error}=await client.from('equipment_catalog').upsert({category,manufacturer,name,...(category==='model'&&catalogTypeForTemplate(rec.template_id)?{equipment_type:catalogTypeForTemplate(rec.template_id)}:{})},{onConflict:'category,manufacturer,name'});
      if(error)console.warn('Kunde inte lägga till i förslagsregistret',error.message);
     }
    }
