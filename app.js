@@ -408,7 +408,7 @@ async function generateProtocol(jobId,send){
   page.drawLine({start:{x:pg.left,y},end:{x:pg.w-pg.right,y},color:lineColor,thickness:.7});
   y-=16;
   add('OBJEKT UTAN ANMÄRKNING ('+p.good.length+')',{bold:true,size:10,after:4});
-  add(p.good.map(x=>x.number).join(', ')||'Inga',{size:9,after:13});
+  y-=9; // Godkända objekt redovisas i sammanfattningen nedan.
   add('OBJEKT MED BRISTER ('+p.bad.length+')',{bold:true,size:10,after:4});
   if(!p.bad.length)add('Inga registrerade brister.',{size:9,after:9});
   for(const item of p.bad){
@@ -431,14 +431,18 @@ async function generateProtocol(jobId,send){
    const pairs=[];for(let k=0;k<groups.length;k+=3)pairs.push(groups.slice(k,k+3));
    const lineRows=pairs.map(pair=>Math.max(...pair.map(g=>wrap(g.name+': '+g.status,regular,7.5,colW-14).length)));
    const contentHeight=lineRows.reduce((h,n)=>h+n*11+4,0);
-   const headerHeight=27,boxHeight=headerHeight+contentHeight+7;
+   const equipmentLabel=[d.e.manufacturer,d.e.model,d.e.controller].map(x=>String(x||'').trim()).filter((x,i,a)=>x&&a.indexOf(x)===i).join(' · ');
+   const title=safe(d.e.number+' - '+templateTitle(d.e.template_id));
+   const headerTitleLines=wrap(title,bold,9.2,pg.w-pg.left-pg.right-123).slice(0,2);
+   const headerMetaLines=equipmentLabel?wrap(equipmentLabel,regular,8,pg.w-pg.left-pg.right-123).slice(0,2):[];
+   const headerHeight=Math.max(27,12+headerTitleLines.length*12+headerMetaLines.length*11),boxHeight=headerHeight+contentHeight+7;
    // Do not split a port summary across pages unless it is taller than a page.
    if(y-boxHeight<pg.bottom+119)newPage();
    const x=pg.left,w=pg.w-pg.left-pg.right;
    page.drawRectangle({x,y:y-headerHeight,width:w,height:headerHeight,color:pale,borderWidth:.6,borderColor:lineColor});
-   const title=safe(d.e.number+' - '+templateTitle(d.e.template_id));
-   const clipped=wrap(title,bold,9.2,w-116)[0]||'';
-   page.drawText(clipped,{x:x+11,y:y-17,font:bold,size:9.2,color:navy});
+   let titleY=y-16;
+   headerTitleLines.forEach(line=>{page.drawText(safe(line),{x:x+11,y:titleY,font:bold,size:9.2,color:navy});titleY-=12});
+   headerMetaLines.forEach(line=>{page.drawText(safe(line),{x:x+11,y:titleY,font:regular,size:8,color:navy});titleY-=11});
    page.drawText(state,{x:x+w-(state==='BRISTER'?61:state==='EJ KLAR'?58:27),y:y-17,font:bold,size:9,color:failing?red:unresolved?navy:green});
    let yy=y-headerHeight-16;
    pairs.forEach((pair,idx)=>{
@@ -469,12 +473,12 @@ async function generateProtocol(jobId,send){
   y=boxBottom-25;
   add('Antal objekt: '+p.all+'   Utan brister: '+p.good.length+'   Med brister: '+p.bad.length,{after:10});
   heading('OBJEKT UTAN ANMÄRKNING ('+p.good.length+')');
-  add(p.good.map(x=>x.number).join(', ')||'Inga',{after:11});
+  y-=10;
   heading('OBJEKT MED BRISTER ('+p.bad.length+')');
   if(!p.bad.length)add('Inga registrerade brister.',{after:7});
   for(const item of p.bad){add(item.e.number,{bold:true,size:11,after:3});for(const fault of item.failed){const point=first(items,x=>x.id===fault.item_id);add((point?.label||'Kontrollpunkt')+' - Brist',{bold:true,size:10});add(fault.description||'Bristbeskrivning saknas',{indent:12,after:4})}}
   heading('KONTROLLRESULTAT PER KATEGORI');
-  for(const d of p.details){if(y<pg.bottom+85)newPage();add(d.e.number+' - '+templateTitle(d.e.template_id),{bold:true,size:11});for(const group of protocolCategories(d))add(group.name+' : '+group.status,{size:9,leading:12});y-=10}
+  for(const d of p.details){if(y<pg.bottom+85)newPage();add([d.e.number+' - '+templateTitle(d.e.template_id),[d.e.manufacturer,d.e.model,d.e.controller].filter(Boolean).join(' · ')].filter(Boolean).join(' | '),{bold:true,size:10});for(const group of protocolCategories(d))add(group.name+' : '+group.status,{size:9,leading:12});y-=10}
  }
  // Company information belongs at the bottom of the LAST page only.
  const footerHeight=106;
