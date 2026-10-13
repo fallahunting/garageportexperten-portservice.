@@ -431,18 +431,22 @@ async function generateProtocol(jobId,send){
    const pairs=[];for(let k=0;k<groups.length;k+=3)pairs.push(groups.slice(k,k+3));
    const lineRows=pairs.map(pair=>Math.max(...pair.map(g=>wrap(g.name+': '+g.status,regular,7.5,colW-14).length)));
    const contentHeight=lineRows.reduce((h,n)=>h+n*11+4,0);
-   const equipmentLabel=[d.e.manufacturer,d.e.model,d.e.controller].map(x=>String(x||'').trim()).filter((x,i,a)=>x&&a.indexOf(x)===i).join(' · ');
+   const equipmentLabel=[d.e.manufacturer,d.e.model,d.e.controller].map(v=>String(v||'').trim()).filter((v,i,a)=>v&&a.indexOf(v)===i).join(' · ');
    const title=safe(d.e.number+' - '+templateTitle(d.e.template_id));
-   const headerTitleLines=wrap(title,bold,9.2,pg.w-pg.left-pg.right-123).slice(0,2);
-   const headerMetaLines=equipmentLabel?wrap(equipmentLabel,regular,8,pg.w-pg.left-pg.right-123).slice(0,2):[];
-   const headerHeight=Math.max(27,12+headerTitleLines.length*12+headerMetaLines.length*11),boxHeight=headerHeight+contentHeight+7;
-   // Do not split a port summary across pages unless it is taller than a page.
+   const fullTitle=equipmentLabel?title+' · '+safe(equipmentLabel):title;
+   const headerHeight=27,boxHeight=headerHeight+contentHeight+7;
    if(y-boxHeight<pg.bottom+119)newPage();
    const x=pg.left,w=pg.w-pg.left-pg.right;
    page.drawRectangle({x,y:y-headerHeight,width:w,height:headerHeight,color:pale,borderWidth:.6,borderColor:lineColor});
-   let titleY=y-16;
-   headerTitleLines.forEach(line=>{page.drawText(safe(line),{x:x+11,y:titleY,font:bold,size:9.2,color:navy});titleY-=12});
-   headerMetaLines.forEach(line=>{page.drawText(safe(line),{x:x+11,y:titleY,font:regular,size:8,color:navy});titleY-=11});
+   const maxTitleWidth=w-(state==='BRISTER'?83:state==='EJ KLAR'?82:49)-18;
+   let titleSize=9.2;
+   while(titleSize>6.3&&bold.widthOfTextAtSize(fullTitle,titleSize)>maxTitleWidth)titleSize-=0.2;
+   const truncateTitle=()=>{
+    let t=fullTitle;
+    while(t.length&&bold.widthOfTextAtSize(t,titleSize)>maxTitleWidth)t=t.slice(0,-1);
+    return t.length<fullTitle.length?t.trimEnd()+'…':t;
+   };
+   page.drawText(truncateTitle(),{x:x+11,y:y-17,font:bold,size:titleSize,color:navy});
    page.drawText(state,{x:x+w-(state==='BRISTER'?61:state==='EJ KLAR'?58:27),y:y-17,font:bold,size:9,color:failing?red:unresolved?navy:green});
    let yy=y-headerHeight-16;
    pairs.forEach((pair,idx)=>{
