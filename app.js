@@ -122,7 +122,7 @@ async function updateRow(table,rowid,patch){
  const {data,error}=await client.from(table).update(patch).eq('id',rowid).select('*').single();if(error)throw error;return data;
 }
 async function refresh(){
- const names=['organizations','profiles','customers','equipment','service_jobs','job_equipment','inspection_answers','issues','issue_service_checks','legacy_service_imports','legacy_service_issues'];
+ const names=['organizations','profiles','customers','equipment','service_jobs','job_equipment','inspection_answers','issues','issue_service_checks','legacy_service_imports','legacy_service_issues','equipment_catalog'];
  const rows=await Promise.all(names.map(t=>getRows(t,{})));
  names.forEach((name,i)=>sys.tables[name]=rows[i]);
  if(publicTest||sharedLogin){
@@ -239,7 +239,22 @@ function serviceTemplateOptions(selected){
   '<optgroup label="'+esc(heading)+'">'+options.filter(([id])=>known.has(id)).map(([id,label])=>
    '<option value="'+esc(id)+'" '+(id===selected?'selected':'')+'>'+esc(label)+'</option>').join('')+'</optgroup>').join('');
 }
-function equipmentForm(e){let cid=e?.customer_id||sys.selectedCustomer||table('customers')[0]?.id;return `<h2>${e?'Ändra':'Lägg till'} serviceobjekt</h2><form id="equipmentform"><input type="hidden" name="replaces_id" value=""><input type="hidden" name="id" value="${esc(e?.id||'')}"><div class="field"><label>Kund *</label><select name="customer_id" required>${optionList(table('customers').map(c=>[c.id,c.name]),cid)}</select></div><div class="field"><label>Portnummer / objektnummer *</label><input name="number" required value="${esc(e?.number||'')}"></div><div class="field"><label>Porttyp / servicemall</label><select name="template_id" id="obj-template">${serviceTemplateOptions(e?.template_id||( ['BRF','Samfällighet'].includes(customerBy(cid)?.customer_type)?'GE-VILLA-TAK-MOTOR':undefined))}</select></div><div class="field"><label>Brandportsutförande (om brandport)</label><select name="subtype">${optionList([['','Ej brandport / välj senare'],['Skjutbrandport','Skjutbrandport'],['Vikbrandport','Vikbrandport'],['Brandjalusi','Brandjalusi']],e?.subtype||'')}</select></div><div class="fieldgroup"><div class="field"><label>Fabrikat</label><input name="manufacturer" value="${esc(e?.manufacturer||'')}"></div><div class="field"><label>Modell</label><input name="model" value="${esc(e?.model||'')}"></div></div><div class="field"><label>Styrning</label><input name="controller" value="${esc(e?.controller||'')}" placeholder="t.ex. Hörmann A445"></div><div class="field"><label>Serienummer</label><input name="serial_no" value="${esc(e?.serial_no||'')}"></div><div class="fieldgroup"><div class="field"><label>Serviceintervall</label><select name="interval_months">${optionList([['','Välj intervall'],[3,'3 månader'],[6,'6 månader'],[12,'12 månader']].map(([a,b])=>[String(a),b]),String(e?.interval_months||customerBy(cid)?.service_interval_months||''))}</select></div><div class="field"><label>Nästa service</label><input type="date" name="next_service_on" value="${esc(e?.next_service_on||'')}"></div></div><div class="toolbar"><button type="button" class="action secondary" data-action="close-modal">Avbryt</button><button type="button" class="action" data-save-equipment="yes">Spara objekt</button></div></form>`;}
+function catalogDatalist(category,manufacturer=''){
+ const rows=table('equipment_catalog').filter(r=>r.category===category&&(!manufacturer||r.manufacturer===manufacturer));
+ return [...new Set(rows.map(r=>r.name))].sort((a,b)=>a.localeCompare(b,'sv')).map(v=>'<option value="'+esc(v)+'"></option>').join('');
+}
+function catalogManufacturers(){return [...new Set(table('equipment_catalog').map(r=>r.manufacturer))].sort((a,b)=>a.localeCompare(b,'sv'));}
+function refreshCatalogInputs(){
+ const form=document.getElementById('equipmentform');if(!form)return;
+ const brand=form.elements.manufacturer?.value.trim();
+ const models=form.querySelector('#catalog-model-options');
+ const controllers=form.querySelector('#catalog-controller-options');
+ const motors=form.querySelector('#catalog-motor-options');
+ if(models)models.innerHTML=catalogDatalist('model',brand);
+ if(controllers)controllers.innerHTML=catalogDatalist('controller');
+ if(motors)motors.innerHTML=catalogDatalist('motor');
+}
+function equipmentForm(e){let cid=e?.customer_id||sys.selectedCustomer||table('customers')[0]?.id;return `<h2>${e?'Ändra':'Lägg till'} serviceobjekt</h2><form id="equipmentform"><input type="hidden" name="replaces_id" value=""><input type="hidden" name="id" value="${esc(e?.id||'')}"><div class="field"><label>Kund *</label><select name="customer_id" required>${optionList(table('customers').map(c=>[c.id,c.name]),cid)}</select></div><div class="field"><label>Portnummer / objektnummer *</label><input name="number" required value="${esc(e?.number||'')}"></div><div class="field"><label>Porttyp / servicemall</label><select name="template_id" id="obj-template">${serviceTemplateOptions(e?.template_id||( ['BRF','Samfällighet'].includes(customerBy(cid)?.customer_type)?'GE-VILLA-TAK-MOTOR':undefined))}</select></div><div class="field"><label>Brandportsutförande (om brandport)</label><select name="subtype">${optionList([['','Ej brandport / välj senare'],['Skjutbrandport','Skjutbrandport'],['Vikbrandport','Vikbrandport'],['Brandjalusi','Brandjalusi']],e?.subtype||'')}</select></div><div class="fieldgroup"><div class="field"><label>Fabrikat</label><input name="manufacturer" list="catalog-brand-options" autocomplete="off" value="${esc(e?.manufacturer||'')}" placeholder="Sök eller skriv fabrikat"><datalist id="catalog-brand-options">${catalogManufacturers().map(v=>`<option value="${esc(v)}"></option>`).join('')}</datalist></div><div class="field"><label>Portmodell</label><input name="model" list="catalog-model-options" autocomplete="off" value="${esc(e?.model||'')}" placeholder="Sök modell"><datalist id="catalog-model-options">${catalogDatalist('model',e?.manufacturer||'')}</datalist></div></div><div class="fieldgroup"><div class="field"><label>Motor (valfritt)</label><input name="motor" list="catalog-motor-options" value="${esc(e?.motor||'')}" placeholder="Sök motor"><datalist id="catalog-motor-options">${catalogDatalist('motor')}</datalist></div><div class="field"><label>Styrning</label><input name="controller" list="catalog-controller-options" value="${esc(e?.controller||'')}" placeholder="Sök styrning"><datalist id="catalog-controller-options">${catalogDatalist('controller')}</datalist></div></div><p class="small muted">Förslagen är ett sökregister – bekräfta alltid faktisk modell och kompatibilitet på märkplåten. Egna uppgifter kan skrivas direkt.</p><div class="field"><label>Serienummer</label><input name="serial_no" value="${esc(e?.serial_no||'')}"></div><div class="fieldgroup"><div class="field"><label>Serviceintervall</label><select name="interval_months">${optionList([['','Välj intervall'],[3,'3 månader'],[6,'6 månader'],[12,'12 månader']].map(([a,b])=>[String(a),b]),String(e?.interval_months||customerBy(cid)?.service_interval_months||''))}</select></div><div class="field"><label>Nästa service</label><input type="date" name="next_service_on" value="${esc(e?.next_service_on||'')}"></div></div><div class="toolbar"><button type="button" class="action secondary" data-action="close-modal">Avbryt</button><button type="button" class="action" data-save-equipment="yes">Spara objekt</button></div></form>`;}
 function newJobForm(){return `<h2>Starta serviceuppdrag</h2><form id="jobform"><div class="field"><label>Välj kund</label><select name="customer_id" id="newjobcustomer" required>${optionList(table('customers').map(c=>[c.id,c.name]),sys.selectedCustomer||table('customers')[0]?.id)}</select></div><div class="field"><label>Servicedatum</label><input type="date" name="service_date" value="${new Date().toISOString().slice(0,10)}"></div><div class="notify">Alla kundens registrerade objekt kopplas till uppdraget. De kan kontrolleras över flera dagar. Kontrollresultat börjar alltid tomma.</div><div class="toolbar"><button type="button" class="action secondary" data-action="close-modal">Avbryt</button><button class="action" type="submit">Starta service</button></div></form>`;}
 function modal(html){sys.modal=html;render();}
 async function saveAnswer(jeid,itemid,answer,description=''){
@@ -431,7 +446,7 @@ async function generateProtocol(jobId,send){
    const pairs=[];for(let k=0;k<groups.length;k+=3)pairs.push(groups.slice(k,k+3));
    const lineRows=pairs.map(pair=>Math.max(...pair.map(g=>wrap(g.name+': '+g.status,regular,7.5,colW-14).length)));
    const contentHeight=lineRows.reduce((h,n)=>h+n*11+4,0);
-   const equipmentLabel=[d.e.manufacturer,d.e.model,d.e.controller].map(v=>String(v||'').trim()).filter((v,i,a)=>v&&a.indexOf(v)===i).join(' · ');
+   const equipmentLabel=[d.e.manufacturer,d.e.model,d.e.motor,d.e.controller].map(v=>String(v||'').trim()).filter((v,i,a)=>v&&a.indexOf(v)===i).join(' · ');
    const title=safe(d.e.number+' - '+templateTitle(d.e.template_id));
    const fullTitle=equipmentLabel?title+' · '+safe(equipmentLabel):title;
    const headerHeight=27,boxHeight=headerHeight+contentHeight+7;
@@ -482,7 +497,7 @@ async function generateProtocol(jobId,send){
   if(!p.bad.length)add('Inga registrerade brister.',{after:7});
   for(const item of p.bad){add(item.e.number,{bold:true,size:11,after:3});for(const fault of item.failed){const point=first(items,x=>x.id===fault.item_id);add((point?.label||'Kontrollpunkt')+' - Brist',{bold:true,size:10});add(fault.description||'Bristbeskrivning saknas',{indent:12,after:4})}}
   heading('KONTROLLRESULTAT PER KATEGORI');
-  for(const d of p.details){if(y<pg.bottom+85)newPage();add([d.e.number+' - '+templateTitle(d.e.template_id),[d.e.manufacturer,d.e.model,d.e.controller].filter(Boolean).join(' · ')].filter(Boolean).join(' | '),{bold:true,size:10});for(const group of protocolCategories(d))add(group.name+' : '+group.status,{size:9,leading:12});y-=10}
+  for(const d of p.details){if(y<pg.bottom+85)newPage();add([d.e.number+' - '+templateTitle(d.e.template_id),[d.e.manufacturer,d.e.model,d.e.motor,d.e.controller].filter(Boolean).join(' · ')].filter(Boolean).join(' | '),{bold:true,size:10});for(const group of protocolCategories(d))add(group.name+' : '+group.status,{size:9,leading:12});y-=10}
  }
  // Company information belongs at the bottom of the LAST page only.
  const footerHeight=106;
@@ -630,7 +645,7 @@ async function handleSubmit(ev){const form=ev.target;if(!['loginform','customerf
    sys.modal=null;sys.banner='Kunden har sparats: '+rec.name;sys.alertClass='success';render();return;
   }
   if(form.id==='equipmentform'){
-   const rec={customer_id:v('customer_id'),number:v('number'),template_id:v('template_id'),subtype:v('subtype'),manufacturer:v('manufacturer'),model:v('model'),controller:v('controller'),serial_no:v('serial_no'),interval_months:v('interval_months')?Number(v('interval_months')):(customerBy(v('customer_id'))?.service_interval_months||null),next_service_on:v('next_service_on')||null};
+   const rec={customer_id:v('customer_id'),number:v('number'),template_id:v('template_id'),subtype:v('subtype'),manufacturer:v('manufacturer'),model:v('model'),motor:v('motor'),controller:v('controller'),serial_no:v('serial_no'),interval_months:v('interval_months')?Number(v('interval_months')):(customerBy(v('customer_id'))?.service_interval_months||null),next_service_on:v('next_service_on')||null};
    if(rec.template_id==='GE-BRANDPORT-01'&&!rec.subtype)throw Error('Välj brandportstyp innan du sparar');
    if(v('id'))await updateRow('equipment',v('id'),rec);else await insertRows('equipment',[{org_id:org(),...rec}]);
    sys.modal=null;await refresh();return;
@@ -882,7 +897,7 @@ document.addEventListener('change',async ev=>{if(ev.target.dataset.intervalObjec
  const n=Number(ev.target.value);if(![3,6,12].includes(n))return;
  try{const e=equipBy(ev.target.dataset.intervalObject);await updateRow('equipment',e.id,{interval_months:n,responsible_user:e.responsible_user||sys.user.id});await refresh();notify('Serviceintervall sparat.')}catch(err){notify(err.message,true)}return;
  }if(ev.target.id==='equips'){sys.selectedJE=ev.target.value;sys.groupOpen={};render()} if((ev.target.id==='active-technician'||ev.target.id==='demo-technician')&&(!live||publicTest||sharedLogin)){const p=first(table('profiles'),p=>p.user_id===ev.target.value&&p.active!==false);if(p){sys.profile=p;sys.user={id:p.user_id,email:''};localStorage.setItem(TECHKEY,p.user_id);sys.banner='Aktiv montör: '+p.display_name+'. Nya kontroller registreras på denna montör.';sys.alertClass='success';render()}}});
-document.addEventListener('input',ev=>{if(ev.target.id==='filter'){const start=ev.target.selectionStart;sys.filter=ev.target.value;render();const inp=$('#filter');inp?.focus();inp?.setSelectionRange(start,start)}});
+document.addEventListener('input',ev=>{if(ev.target.name==='manufacturer'&&ev.target.closest('#equipmentform'))refreshCatalogInputs();if(ev.target.id==='filter'){const start=ev.target.selectionStart;sys.filter=ev.target.value;render();const inp=$('#filter');inp?.focus();inp?.setSelectionRange(start,start)}});
 document.addEventListener('focusout',async ev=>{
  const text=ev.target;if(!text.matches('[data-description]'))return;
  const [jeid,itemid]=text.dataset.description.split('|'),value=text.value.trim();if(!value)return;const a=ansFor(jeid,itemid);if(a?.answer==='Brist'){try{await saveAnswer(jeid,itemid,'Brist',value);render()}catch(e){notify('Bristen kunde inte sparas: '+e.message,true)}}
