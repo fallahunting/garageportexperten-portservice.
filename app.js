@@ -648,6 +648,15 @@ async function handleSubmit(ev){const form=ev.target;if(!['loginform','customerf
    const rec={customer_id:v('customer_id'),number:v('number'),template_id:v('template_id'),subtype:v('subtype'),manufacturer:v('manufacturer'),model:v('model'),motor:v('motor'),controller:v('controller'),serial_no:v('serial_no'),interval_months:v('interval_months')?Number(v('interval_months')):(customerBy(v('customer_id'))?.service_interval_months||null),next_service_on:v('next_service_on')||null};
    if(rec.template_id==='GE-BRANDPORT-01'&&!rec.subtype)throw Error('Välj brandportstyp innan du sparar');
    if(v('id'))await updateRow('equipment',v('id'),rec);else await insertRows('equipment',[{org_id:org(),...rec}]);
+   if(live&&!publicTest){
+    const existing=table('equipment_catalog');
+    const entries=[['model',rec.manufacturer,rec.model],['motor',rec.manufacturer,rec.motor],['controller',rec.manufacturer,rec.controller]];
+    for(const [category,manufacturer,name] of entries){
+     if(!manufacturer||!name||existing.some(x=>x.category===category&&x.manufacturer.toLowerCase()===manufacturer.toLowerCase()&&x.name.toLowerCase()===name.toLowerCase()))continue;
+     const {error}=await client.from('equipment_catalog').upsert({category,manufacturer,name},{onConflict:'category,manufacturer,name'});
+     if(error)console.warn('Kunde inte lägga till i förslagsregistret',error.message);
+    }
+   }
    sys.modal=null;await refresh();return;
   }
   if(form.id==='jobform'){
