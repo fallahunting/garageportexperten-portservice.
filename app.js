@@ -658,7 +658,7 @@ async function handleSubmit(ev){const form=ev.target;if(!['loginform','customerf
     const entries=[['model',rec.manufacturer,rec.model],['motor',rec.manufacturer,rec.motor],['controller',rec.manufacturer,rec.controller]];
     for(const [category,manufacturer,name] of entries){
      if(!manufacturer||!name||existing.some(x=>x.category===category&&x.manufacturer.toLowerCase()===manufacturer.toLowerCase()&&x.name.toLowerCase()===name.toLowerCase()))continue;
-     const {error}=await client.from('equipment_catalog').upsert({category,manufacturer,name},{onConflict:'category,manufacturer,name'});
+     const {error}=await client.from('equipment_catalog').upsert({category,manufacturer,name,...(category==='model'&&isDockTemplate(rec.template_id)?{equipment_type:'lastbrygga'}:{})},{onConflict:'category,manufacturer,name'});
      if(error)console.warn('Kunde inte lägga till i förslagsregistret',error.message);
     }
    }
