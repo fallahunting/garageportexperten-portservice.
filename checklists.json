@@ -5720,14 +5720,14 @@
     "group": "Dokumentation och märkning",
     "group_id": "SSP-G01",
     "order": 10,
-    "label": "Portnummer, typskylt och säkerhetsmärkning är läsbara",
-    "instruction": "Kontrollera, funktionstesta där det är säkert och dokumentera eventuella fel samt åtgärder.",
+    "label": "Objektmärkning, typskylt och säkerhetsmärkning är läsbara",
+    "instruction": "Kontrollera enligt tillverkarens instruktioner. Punkter som inte finns på det aktuella utförandet markeras Ej aktuell; prova säkerhetsfunktioner enligt relevant standard och dokumentera avvikelser.",
     "condition": "Alltid",
     "individual": false,
     "bulk": true,
     "safety": true,
-    "type": "Sidoskjutport",
-    "template_name": "Sidoskjutport – service"
+    "type": "Sidoskjutport eller motordriven skjutgrind",
+    "template_name": "Sidoskjutport / motordriven skjutgrind – service"
   },
   {
     "id": "SSP-002",
@@ -5735,14 +5735,14 @@
     "group": "Dokumentation och märkning",
     "group_id": "SSP-G01",
     "order": 20,
-    "label": "Servicejournal finns vid porten",
-    "instruction": "Kontrollera, funktionstesta där det är säkert och dokumentera eventuella fel samt åtgärder.",
+    "label": "Servicejournal finns vid objektet",
+    "instruction": "Kontrollera enligt tillverkarens instruktioner. Punkter som inte finns på det aktuella utförandet markeras Ej aktuell; prova säkerhetsfunktioner enligt relevant standard och dokumentera avvikelser.",
     "condition": "Alltid",
     "individual": true,
     "bulk": false,
     "safety": false,
-    "type": "Sidoskjutport",
-    "template_name": "Sidoskjutport – service"
+    "type": "Sidoskjutport eller motordriven skjutgrind",
+    "template_name": "Sidoskjutport / motordriven skjutgrind – service"
   },
   {
     "id": "SSP-003",
@@ -5751,13 +5751,13 @@
     "group_id": "SSP-G01",
     "order": 30,
     "label": "Servicejournal är ifylld och uppdaterad",
-    "instruction": "Kontrollera, funktionstesta där det är säkert och dokumentera eventuella fel samt åtgärder.",
+    "instruction": "Kontrollera enligt tillverkarens instruktioner. Punkter som inte finns på det aktuella utförandet markeras Ej aktuell; prova säkerhetsfunktioner enligt relevant standard och dokumentera avvikelser.",
     "condition": "Alltid",
     "individual": true,
     "bulk": false,
     "safety": false,
-    "type": "Sidoskjutport",
-    "template_name": "Sidoskjutport – service"
+    "type": "Sidoskjutport eller motordriven skjutgrind",
+    "template_name": "Sidoskjutport / motordriven skjutgrind – service"
   },
   {
     "id": "SSP-004",
@@ -5766,13 +5766,13 @@
     "group_id": "SSP-G01",
     "order": 40,
     "label": "Bruksanvisning och relevant dokumentation finns",
-    "instruction": "Kontrollera, funktionstesta där det är säkert och dokumentera eventuella fel samt åtgärder.",
+    "instruction": "Kontrollera enligt tillverkarens instruktioner. Punkter som inte finns på det aktuella utförandet markeras Ej aktuell; prova säkerhetsfunktioner enligt relevant standard och dokumentera avvikelser.",
     "condition": "Alltid",
     "individual": false,
     "bulk": true,
     "safety": false,
-    "type": "Sidoskjutport",
-    "template_name": "Sidoskjutport – service"
+    "type": "Sidoskjutport eller motordriven skjutgrind",
+    "template_name": "Sidoskjutport / motordriven skjutgrind – service"
   },
   {
     "id": "SSP-011",
@@ -5780,14 +5780,14 @@
     "group": "Portblad och styrning",
     "group_id": "SSP-G02",
     "order": 10,
-    "label": "Portblad, sektioner och infästningar är hela",
-    "instruction": "Kontrollera, funktionstesta där det är säkert och dokumentera eventuella fel samt åtgärder.",
+    "label": "Port-/grindblad, ram och infästningar är hela",
+    "instruction": "Kontrollera enligt tillverkarens instruktioner. Punkter som inte finns på det aktuella utförandet markeras Ej aktuell; prova säkerhetsfunktioner enligt relevant standard och dokumentera avvikelser.",
     "condition": "Alltid",
     "individual": false,
     "bulk": true,
     "safety": false,
-    "type": "Sidoskjutport",
-    "template_name": "Sidoskjutport – service"
+    "type": "Sidoskjutport eller motordriven skjutgrind",
+    "template_name": "Sidoskjutport / motordriven skjutgrind – service"
   },
   {
     "id": "SSP-012",
@@ -5795,14 +5795,14 @@
     "group": "Portblad och styrning",
     "group_id": "SSP-G02",
     "order": 20,
-    "label": "Golv- och takstyrningar samt glidskenor är hela och fria från hinder",
-    "instruction": "Kontrollera, funktionstesta där det är säkert och dokumentera eventuella fel samt åtgärder.",
+    "label": "Skenor och styrningar (golv/tak där tillämpligt) är hela och fria från hinder",
+    "instruction": "Kontrollera enligt tillverkarens instruktioner. Punkter som inte finns på det aktuella utförandet markeras Ej aktuell; prova säkerhetsfunktioner enligt relevant standard och dokumentera avvikelser.",
     "condition": "Alltid",
     "individual": false,
     "bulk": true,
     "safety": false,
-    "type": "Sidoskjutport",
-    "template_name": "Sidoskjutport – service"
+    "type": "Sidoskjutport eller motordriven skjutgrind",
+    "template_name": "Sidoskjutport / motordriven skjutgrind – service"
   },
   {
     "id": "SSP-013",
@@ -5810,14 +5810,14 @@
     "group": "Portblad och styrning",
     "group_id": "SSP-G02",
     "order": 30,
-    "label": "Löpvagnar, rullar och lager är hela och fungerar",
-    "instruction": "Kontrollera, funktionstesta där det är säkert och dokumentera eventuella fel samt åtgärder.",
+    "label": "Löpvagnar, hjul, rullar och lager är hela och fungerar",
+    "instruction": "Kontrollera enligt tillverkarens instruktioner. Punkter som inte finns på det aktuella utförandet markeras Ej aktuell; prova säkerhetsfunktioner enligt relevant standard och dokumentera avvikelser.",
     "condition": "Alltid",
     "individual": false,
     "bulk": true,
     "safety": false,
-    "type": "Sidoskjutport",
-    "template_name": "Sidoskjutport – service"
+    "type": "Sidoskjutport eller motordriven skjutgrind",
+    "template_name": "Sidoskjutport / motordriven skjutgrind – service"
   },
   {
     "id": "SSP-014",
@@ -5825,14 +5825,14 @@
     "group": "Portblad och styrning",
     "group_id": "SSP-G02",
     "order": 40,
-    "label": "Portens gång, stopp och ändlägen är korrekta",
-    "instruction": "Kontrollera, funktionstesta där det är säkert och dokumentera eventuella fel samt åtgärder.",
+    "label": "Gång, stopp, ändlägen och anslag fungerar",
+    "instruction": "Kontrollera enligt tillverkarens instruktioner. Punkter som inte finns på det aktuella utförandet markeras Ej aktuell; prova säkerhetsfunktioner enligt relevant standard och dokumentera avvikelser.",
     "condition": "Alltid",
     "individual": false,
     "bulk": true,
     "safety": false,
-    "type": "Sidoskjutport",
-    "template_name": "Sidoskjutport – service"
+    "type": "Sidoskjutport eller motordriven skjutgrind",
+    "template_name": "Sidoskjutport / motordriven skjutgrind – service"
   },
   {
     "id": "SSP-015",
@@ -5840,14 +5840,14 @@
     "group": "Portblad och styrning",
     "group_id": "SSP-G02",
     "order": 50,
-    "label": "Sidotätningar, bottenlist och klämskyddsgummi är hela",
-    "instruction": "Kontrollera, funktionstesta där det är säkert och dokumentera eventuella fel samt åtgärder.",
+    "label": "Tätningar, bottenlist och klämskyddsgummi är hela där sådana finns",
+    "instruction": "Kontrollera enligt tillverkarens instruktioner. Punkter som inte finns på det aktuella utförandet markeras Ej aktuell; prova säkerhetsfunktioner enligt relevant standard och dokumentera avvikelser.",
     "condition": "Alltid",
     "individual": false,
     "bulk": true,
     "safety": true,
-    "type": "Sidoskjutport",
-    "template_name": "Sidoskjutport – service"
+    "type": "Sidoskjutport eller motordriven skjutgrind",
+    "template_name": "Sidoskjutport / motordriven skjutgrind – service"
   },
   {
     "id": "SSP-021",
@@ -5855,14 +5855,14 @@
     "group": "Drivning och manöver",
     "group_id": "SSP-G03",
     "order": 10,
-    "label": "Motor och växel är fria från skador och missljud",
-    "instruction": "Kontrollera, funktionstesta där det är säkert och dokumentera eventuella fel samt åtgärder.",
+    "label": "Motor, växel och eventuell drivrem/kedja fungerar utan skador och missljud",
+    "instruction": "Kontrollera enligt tillverkarens instruktioner. Punkter som inte finns på det aktuella utförandet markeras Ej aktuell; prova säkerhetsfunktioner enligt relevant standard och dokumentera avvikelser.",
     "condition": "Alltid",
     "individual": false,
     "bulk": true,
     "safety": false,
-    "type": "Sidoskjutport",
-    "template_name": "Sidoskjutport – service"
+    "type": "Sidoskjutport eller motordriven skjutgrind",
+    "template_name": "Sidoskjutport / motordriven skjutgrind – service"
   },
   {
     "id": "SSP-022",
@@ -5871,13 +5871,13 @@
     "group_id": "SSP-G03",
     "order": 20,
     "label": "Motorinfästning, kablage och förgreningar är hela",
-    "instruction": "Kontrollera, funktionstesta där det är säkert och dokumentera eventuella fel samt åtgärder.",
+    "instruction": "Kontrollera enligt tillverkarens instruktioner. Punkter som inte finns på det aktuella utförandet markeras Ej aktuell; prova säkerhetsfunktioner enligt relevant standard och dokumentera avvikelser.",
     "condition": "Alltid",
     "individual": false,
     "bulk": true,
     "safety": false,
-    "type": "Sidoskjutport",
-    "template_name": "Sidoskjutport – service"
+    "type": "Sidoskjutport eller motordriven skjutgrind",
+    "template_name": "Sidoskjutport / motordriven skjutgrind – service"
   },
   {
     "id": "SSP-023",
@@ -5886,13 +5886,13 @@
     "group_id": "SSP-G03",
     "order": 30,
     "label": "Start, stopp, öppna och stäng fungerar",
-    "instruction": "Kontrollera, funktionstesta där det är säkert och dokumentera eventuella fel samt åtgärder.",
+    "instruction": "Kontrollera enligt tillverkarens instruktioner. Punkter som inte finns på det aktuella utförandet markeras Ej aktuell; prova säkerhetsfunktioner enligt relevant standard och dokumentera avvikelser.",
     "condition": "Alltid",
     "individual": false,
     "bulk": true,
     "safety": false,
-    "type": "Sidoskjutport",
-    "template_name": "Sidoskjutport – service"
+    "type": "Sidoskjutport eller motordriven skjutgrind",
+    "template_name": "Sidoskjutport / motordriven skjutgrind – service"
   },
   {
     "id": "SSP-024",
@@ -5900,14 +5900,14 @@
     "group": "Drivning och manöver",
     "group_id": "SSP-G03",
     "order": 40,
-    "label": "Knappsats och manöverdon är hela och korrekt märkta",
-    "instruction": "Kontrollera, funktionstesta där det är säkert och dokumentera eventuella fel samt åtgärder.",
+    "label": "Knappsats, manöverdon och eventuell fjärrstyrning fungerar",
+    "instruction": "Kontrollera enligt tillverkarens instruktioner. Punkter som inte finns på det aktuella utförandet markeras Ej aktuell; prova säkerhetsfunktioner enligt relevant standard och dokumentera avvikelser.",
     "condition": "Alltid",
     "individual": false,
     "bulk": true,
     "safety": false,
-    "type": "Sidoskjutport",
-    "template_name": "Sidoskjutport – service"
+    "type": "Sidoskjutport eller motordriven skjutgrind",
+    "template_name": "Sidoskjutport / motordriven skjutgrind – service"
   },
   {
     "id": "SSP-025",
@@ -5916,13 +5916,13 @@
     "group_id": "SSP-G03",
     "order": 50,
     "label": "Frikoppling och manuell manövrering fungerar",
-    "instruction": "Kontrollera, funktionstesta där det är säkert och dokumentera eventuella fel samt åtgärder.",
+    "instruction": "Kontrollera enligt tillverkarens instruktioner. Punkter som inte finns på det aktuella utförandet markeras Ej aktuell; prova säkerhetsfunktioner enligt relevant standard och dokumentera avvikelser.",
     "condition": "Alltid",
     "individual": false,
     "bulk": true,
     "safety": true,
-    "type": "Sidoskjutport",
-    "template_name": "Sidoskjutport – service"
+    "type": "Sidoskjutport eller motordriven skjutgrind",
+    "template_name": "Sidoskjutport / motordriven skjutgrind – service"
   },
   {
     "id": "SSP-031",
@@ -5930,14 +5930,14 @@
     "group": "Säkerhet",
     "group_id": "SSP-G04",
     "order": 10,
-    "label": "Fotoceller och optiska skydd fungerar",
-    "instruction": "Kontrollera, funktionstesta där det är säkert och dokumentera eventuella fel samt åtgärder.",
+    "label": "Fotoceller och andra närvaroskydd fungerar där tillämpligt",
+    "instruction": "Kontrollera enligt tillverkarens instruktioner. Punkter som inte finns på det aktuella utförandet markeras Ej aktuell; prova säkerhetsfunktioner enligt relevant standard och dokumentera avvikelser.",
     "condition": "Alltid",
     "individual": false,
     "bulk": true,
     "safety": true,
-    "type": "Sidoskjutport",
-    "template_name": "Sidoskjutport – service"
+    "type": "Sidoskjutport eller motordriven skjutgrind",
+    "template_name": "Sidoskjutport / motordriven skjutgrind – service"
   },
   {
     "id": "SSP-032",
@@ -5945,14 +5945,14 @@
     "group": "Säkerhet",
     "group_id": "SSP-G04",
     "order": 20,
-    "label": "Klämskydd och kontaktlister fungerar",
-    "instruction": "Kontrollera, funktionstesta där det är säkert och dokumentera eventuella fel samt åtgärder.",
+    "label": "Klämskydd och kontaktlister fungerar där tillämpligt",
+    "instruction": "Kontrollera enligt tillverkarens instruktioner. Punkter som inte finns på det aktuella utförandet markeras Ej aktuell; prova säkerhetsfunktioner enligt relevant standard och dokumentera avvikelser.",
     "condition": "Alltid",
     "individual": false,
     "bulk": true,
     "safety": true,
-    "type": "Sidoskjutport",
-    "template_name": "Sidoskjutport – service"
+    "type": "Sidoskjutport eller motordriven skjutgrind",
+    "template_name": "Sidoskjutport / motordriven skjutgrind – service"
   },
   {
     "id": "SSP-033",
@@ -5961,13 +5961,13 @@
     "group_id": "SSP-G04",
     "order": 30,
     "label": "Nödstopp och säkerhetsbrytare fungerar",
-    "instruction": "Kontrollera, funktionstesta där det är säkert och dokumentera eventuella fel samt åtgärder.",
+    "instruction": "Kontrollera enligt tillverkarens instruktioner. Punkter som inte finns på det aktuella utförandet markeras Ej aktuell; prova säkerhetsfunktioner enligt relevant standard och dokumentera avvikelser.",
     "condition": "Alltid",
     "individual": false,
     "bulk": true,
     "safety": true,
-    "type": "Sidoskjutport",
-    "template_name": "Sidoskjutport – service"
+    "type": "Sidoskjutport eller motordriven skjutgrind",
+    "template_name": "Sidoskjutport / motordriven skjutgrind – service"
   },
   {
     "id": "SSP-034",
@@ -5975,14 +5975,14 @@
     "group": "Säkerhet",
     "group_id": "SSP-G04",
     "order": 40,
-    "label": "Kraftbegränsning och hinderdetektering fungerar",
-    "instruction": "Kontrollera, funktionstesta där det är säkert och dokumentera eventuella fel samt åtgärder.",
+    "label": "Kraftbegränsning och hinderdetektering fungerar enligt relevant utrustning",
+    "instruction": "Kontrollera enligt tillverkarens instruktioner. Punkter som inte finns på det aktuella utförandet markeras Ej aktuell; prova säkerhetsfunktioner enligt relevant standard och dokumentera avvikelser.",
     "condition": "Alltid",
     "individual": false,
     "bulk": true,
     "safety": true,
-    "type": "Sidoskjutport",
-    "template_name": "Sidoskjutport – service"
+    "type": "Sidoskjutport eller motordriven skjutgrind",
+    "template_name": "Sidoskjutport / motordriven skjutgrind – service"
   },
   {
     "id": "SSP-035",
@@ -5991,13 +5991,13 @@
     "group_id": "SSP-G04",
     "order": 50,
     "label": "Skydd över rörliga delar och klämställen är hela",
-    "instruction": "Kontrollera, funktionstesta där det är säkert och dokumentera eventuella fel samt åtgärder.",
+    "instruction": "Kontrollera enligt tillverkarens instruktioner. Punkter som inte finns på det aktuella utförandet markeras Ej aktuell; prova säkerhetsfunktioner enligt relevant standard och dokumentera avvikelser.",
     "condition": "Alltid",
     "individual": false,
     "bulk": true,
     "safety": true,
-    "type": "Sidoskjutport",
-    "template_name": "Sidoskjutport – service"
+    "type": "Sidoskjutport eller motordriven skjutgrind",
+    "template_name": "Sidoskjutport / motordriven skjutgrind – service"
   },
   {
     "id": "SSP-041",
@@ -6006,13 +6006,13 @@
     "group_id": "SSP-G05",
     "order": 10,
     "label": "Funktionsprov efter service utfört",
-    "instruction": "Kontrollera, funktionstesta där det är säkert och dokumentera eventuella fel samt åtgärder.",
+    "instruction": "Kontrollera enligt tillverkarens instruktioner. Punkter som inte finns på det aktuella utförandet markeras Ej aktuell; prova säkerhetsfunktioner enligt relevant standard och dokumentera avvikelser.",
     "condition": "Alltid",
     "individual": false,
     "bulk": true,
     "safety": false,
-    "type": "Sidoskjutport",
-    "template_name": "Sidoskjutport – service"
+    "type": "Sidoskjutport eller motordriven skjutgrind",
+    "template_name": "Sidoskjutport / motordriven skjutgrind – service"
   },
   {
     "id": "SSP-042",
@@ -6021,13 +6021,13 @@
     "group_id": "SSP-G05",
     "order": 20,
     "label": "Anmärkningar och rekommenderade åtgärder dokumenterade",
-    "instruction": "Kontrollera, funktionstesta där det är säkert och dokumentera eventuella fel samt åtgärder.",
+    "instruction": "Kontrollera enligt tillverkarens instruktioner. Punkter som inte finns på det aktuella utförandet markeras Ej aktuell; prova säkerhetsfunktioner enligt relevant standard och dokumentera avvikelser.",
     "condition": "Alltid",
     "individual": false,
     "bulk": true,
     "safety": false,
-    "type": "Sidoskjutport",
-    "template_name": "Sidoskjutport – service"
+    "type": "Sidoskjutport eller motordriven skjutgrind",
+    "template_name": "Sidoskjutport / motordriven skjutgrind – service"
   },
   {
     "id": "GRI-001",
