@@ -215,6 +215,8 @@ function serviceTemplateOptions(selected){
   ['Industriservice',[
    ['GE-LBH-01','Hydraulisk lastbrygga'],
    ['GE-LBM-01','Mekanisk lastbrygga'],
+   ['GE-GRIND-01','Motordriven grind – allmän'],
+   ['GE-SIDOSKJUT-01','Sidoskjutport'],
    ['GE-GSK-01','Motordriven skjutgrind'],
    ['GE-GSL-01','Motordriven slaggrind'],
    ['GE-RUL-01','Rullport'],
