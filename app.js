@@ -217,6 +217,7 @@ function serviceTemplateOptions(selected){
    ['GE-LBM-01','Mekanisk lastbrygga'],
    ['GE-GRIND-01','Motordriven grind – allmän'],
    ['GE-SIDOSKJUT-01','Sidoskjutport'],
+   ['GE-INVENTERING-01','Inventering – porttyp måste fastställas'],
    ['GE-GSK-01','Motordriven skjutgrind'],
    ['GE-GSL-01','Motordriven slaggrind'],
    ['GE-RUL-01','Rullport'],
