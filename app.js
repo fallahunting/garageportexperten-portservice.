@@ -334,18 +334,23 @@ function buildPrint(jobId){const p=pdfLines(jobId),line=(a)=>a.map(x=>esc(x.numb
  if(p.customer.customer_type==='Företag'){html+='<h2>Detaljerade kontrollresultat</h2>';for(const d of p.details){html+=`<section><h3>${esc(d.e.number)} – ${esc(templateTitle(d.e.template_id))} – ${esc(d.e.manufacturer)} ${esc(d.e.model)} / ${esc(d.e.controller)}</h3>`;for(const group of protocolCategories(d)){html+=`<div class="item">${esc(group.name)}: <strong>${esc(group.status)}</strong></div>`}html+='</section>'}}
  return html+'</div>';
 }
-async function getPdfLogo(doc){
+async function getPdfLogoPath(){
  const response=await fetch('./assets/gpe-pdf-logo.svg',{cache:'no-store'});
  if(!response.ok)throw Error('PDF-loggan kunde inte laddas');
- const svg=await response.text();
- const image=new Image();
- const url=URL.createObjectURL(new Blob([svg],{type:'image/svg+xml'}));
- try {
-  image.src=url;await image.decode();
-  const canvas=document.createElement('canvas');canvas.width=1736;canvas.height=424;
-  canvas.getContext('2d').drawImage(image,0,0,1736,424);
-  return await doc.embedPng(canvas.toDataURL('image/png'));
- }finally{URL.revokeObjectURL(url)}
+ const svgText=await response.text();
+ const xml=new DOMParser().parseFromString(svgText,'image/svg+xml');
+ const path=xml.querySelector('path')?.getAttribute('d');
+ if(!path)throw Error('PDF-loggan saknar vektorkonturer');
+ return path;
+}
+function drawPdfLogo(page,path,pg,rgb) {
+ // Native PDF vectors: no intermediate PNG or pixel scaling.
+ page.drawSvgPath(path,{
+  x:pg.left,
+  y:pg.h-80,
+  scale:243/217,
+  color:rgb(0,.369,.612)
+ });
 }
 async function generateProtocol(jobId,send){
  const p=pdfLines(jobId);
@@ -376,9 +381,9 @@ async function generateProtocol(jobId,send){
  if(['BRF','Samfällighet'].includes(p.customer.customer_type)||p.details.some(d=>String(d.e.template_id||'').startsWith('GE-VILLA-'))){
   const lineColor=rgb(.81,.86,.89),pale=rgb(.94,.97,.98),green=rgb(.08,.48,.27),red=rgb(.73,.19,.13);
   const isAssociation=['BRF','Samfällighet'].includes(p.customer.customer_type);
-  const pdfLogo=await getPdfLogo(doc);
-  const logo=pdfLogo;
-  page.drawImage(logo,{x:pg.left,y:pg.h-132,width:243,height:243*53/217});
+  const pdfLogoPath=await getPdfLogoPath();
+  
+  drawPdfLogo(page,pdfLogoPath,pg,rgb);
   const bx=310,bw=243,boxTop=pg.h-68,boxBottom=pg.h-151;
   page.drawText('PROTOKOLL',{x:bx,y:pg.h-46,size:16,font:bold,color:navy});
   page.drawRectangle({x:bx,y:boxBottom,width:bw,height:boxTop-boxBottom,borderWidth:.8,borderColor:lineColor});
@@ -436,10 +441,10 @@ async function generateProtocol(jobId,send){
  }else if(industrial){
   // Printable industrial A4 report: real customer, inspections, categories and faults.
   const lineColor=rgb(.81,.86,.89),pale=rgb(.94,.97,.98),green=rgb(.08,.48,.27),red=rgb(.73,.19,.13);
-  const pdfLogo=await getPdfLogo(doc);
-  const actualLogo=pdfLogo;
+  const pdfLogoPath=await getPdfLogoPath();
+  
   // Preserve the exact proportions of the uploaded company logo (212 x 49).
-  page.drawImage(actualLogo,{x:pg.left,y:pg.h-132,width:243,height:243*53/217});
+  drawPdfLogo(page,pdfLogoPath,pg,rgb);
   const bx=310,bw=243,top=pg.h-68,bottom=pg.h-151;
   page.drawText('PROTOKOLL',{x:bx,y:pg.h-46,size:16,font:bold,color:navy});
   page.drawRectangle({x:bx,y:bottom,width:bw,height:top-bottom,borderWidth:.8,borderColor:lineColor});
