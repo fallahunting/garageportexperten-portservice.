@@ -485,23 +485,53 @@ async function generateProtocol(jobId,send){
    const pairs=[];for(let k=0;k<groups.length;k+=3)pairs.push(groups.slice(k,k+3));
    const lineRows=pairs.map(pair=>Math.max(...pair.map(g=>wrap(g.name+': '+g.status,regular,7.5,colW-14).length)));
    const contentHeight=lineRows.reduce((h,n)=>h+n*11+4,0);
-   const equipmentLabel=[d.e.manufacturer,d.e.model,d.e.motor,d.e.controller].map(v=>String(v||'').trim()).filter((v,i,a)=>v&&a.indexOf(v)===i).join(' · ');
-   const title=safe(d.e.number+' - '+templateTitle(d.e.template_id));
-   const fullTitle=equipmentLabel?title+' · '+safe(equipmentLabel):title;
-   const headerHeight=27,boxHeight=headerHeight+contentHeight+7;
+   const perPortAddress=['Finspångs kommun','Hyresbostäder'].includes(p.customer.name);
+   const headerHeight=perPortAddress?39:27,boxHeight=headerHeight+contentHeight+7;
    if(y-boxHeight<pg.bottom+119)newPage();
    const x=pg.left,w=pg.w-pg.left-pg.right;
    page.drawRectangle({x,y:y-headerHeight,width:w,height:headerHeight,color:pale,borderWidth:.6,borderColor:lineColor});
-   const maxTitleWidth=w-(state==='BRISTER'?83:state==='EJ KLAR'?82:49)-18;
-   let titleSize=9.2;
-   while(titleSize>6.3&&bold.widthOfTextAtSize(fullTitle,titleSize)>maxTitleWidth)titleSize-=0.2;
-   const truncateTitle=()=>{
-    let t=fullTitle;
-    while(t.length&&bold.widthOfTextAtSize(t,titleSize)>maxTitleWidth)t=t.slice(0,-1);
-    return t.length<fullTitle.length?t.trimEnd()+'…':t;
-   };
-   page.drawText(truncateTitle(),{x:x+11,y:y-17,font:bold,size:titleSize,color:navy});
-   page.drawText(state,{x:x+w-(state==='BRISTER'?61:state==='EJ KLAR'?58:27),y:y-17,font:bold,size:9,color:failing?red:unresolved?navy:green});
+   if(perPortAddress){
+    // These two customers have multiple service sites; show each door's own address.
+    const cells=[
+     {label:'PORT',value:d.e.number,width:55},
+     {label:'ADRESS',value:d.e.visit_address||'Adress saknas',width:172},
+     {label:'PORTTYP',value:templateTitle(d.e.template_id),width:95},
+     {label:'FABRIKAT',value:d.e.manufacturer||'-',width:65},
+     {label:'STYRNING',value:d.e.controller||'-',width:73},
+     {label:'STATUS',value:state,width:w-460-12}
+    ];
+    const fit=(raw,width,font,size)=>{
+     const original=safe(raw);let val=original,sz=size;
+     while(sz>5.3&&font.widthOfTextAtSize(val,sz)>width-6)sz-=.2;
+     while(val&&font.widthOfTextAtSize(val,sz)>width-6)val=val.slice(0,-1);
+     if(val.length<original.length){while(val&&font.widthOfTextAtSize(val+'..',sz)>width-6)val=val.slice(0,-1);val+='..';}
+     return {val:val||'-',size:sz};
+    };
+    let cx=x+6;
+    for(const cell of cells){
+     page.drawText(cell.label,{x:cx+2,y:y-12,font:bold,size:6.2,color:blue});
+     const statusCell=cell.label==='STATUS';
+     const font=statusCell?bold:regular;
+     const fitted=fit(cell.value,cell.width,font,statusCell?7:7.6);
+     page.drawText(fitted.val,{x:cx+2,y:y-28,font,size:fitted.size,color:statusCell?(failing?red:unresolved?navy:green):navy});
+     cx+=cell.width;
+    }
+   }else{
+    // Keep existing PDF layout unchanged for every other customer.
+    const equipmentLabel=[d.e.manufacturer,d.e.model,d.e.motor,d.e.controller].map(v=>String(v||'').trim()).filter((v,i,a)=>v&&a.indexOf(v)===i).join(' · ');
+    const title=safe(d.e.number+' - '+templateTitle(d.e.template_id));
+    const fullTitle=equipmentLabel?title+' · '+safe(equipmentLabel):title;
+    const maxTitleWidth=w-(state==='BRISTER'?83:state==='EJ KLAR'?82:49)-18;
+    let titleSize=9.2;
+    while(titleSize>6.3&&bold.widthOfTextAtSize(fullTitle,titleSize)>maxTitleWidth)titleSize-=0.2;
+    const truncateTitle=()=>{
+     let t=fullTitle;
+     while(t.length&&bold.widthOfTextAtSize(t,titleSize)>maxTitleWidth)t=t.slice(0,-1);
+     return t.length<fullTitle.length?t.trimEnd()+'…':t;
+    };
+    page.drawText(truncateTitle(),{x:x+11,y:y-17,font:bold,size:titleSize,color:navy});
+    page.drawText(state,{x:x+w-(state==='BRISTER'?61:state==='EJ KLAR'?58:27),y:y-17,font:bold,size:9,color:failing?red:unresolved?navy:green});
+   }
    let yy=y-headerHeight-16;
    pairs.forEach((pair,idx)=>{
     const h=lineRows[idx]*11+4;
