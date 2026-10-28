@@ -342,8 +342,10 @@ async function getPdfLogo(doc){
  const url=URL.createObjectURL(new Blob([svg],{type:'image/svg+xml'}));
  try {
   image.src=url;await image.decode();
-  const canvas=document.createElement('canvas');canvas.width=1736;canvas.height=424;
-  canvas.getContext('2d').drawImage(image,0,0,1736,424);
+  const canvas=document.createElement('canvas');
+  canvas.width=2200;
+  canvas.height=Math.round(2200*86.8/373.08);
+  canvas.getContext('2d').drawImage(image,0,0,canvas.width,canvas.height);
   return await doc.embedPng(canvas.toDataURL('image/png'));
  }finally{URL.revokeObjectURL(url)}
 }
@@ -378,7 +380,7 @@ async function generateProtocol(jobId,send){
   const isAssociation=['BRF','Samfällighet'].includes(p.customer.customer_type);
   const pdfLogo=await getPdfLogo(doc);
   const logo=pdfLogo;
-  page.drawImage(logo,{x:pg.left,y:pg.h-132,width:243,height:243*53/217});
+  page.drawImage(logo,{x:pg.left,y:pg.h-132,width:243,height:243*86.8/373.08});
   const bx=310,bw=243,boxTop=pg.h-68,boxBottom=pg.h-151;
   page.drawText('PROTOKOLL',{x:bx,y:pg.h-46,size:16,font:bold,color:navy});
   page.drawRectangle({x:bx,y:boxBottom,width:bw,height:boxTop-boxBottom,borderWidth:.8,borderColor:lineColor});
@@ -439,7 +441,7 @@ async function generateProtocol(jobId,send){
   const pdfLogo=await getPdfLogo(doc);
   const actualLogo=pdfLogo;
   // Preserve the exact proportions of the uploaded company logo (212 x 49).
-  page.drawImage(actualLogo,{x:pg.left,y:pg.h-132,width:243,height:243*53/217});
+  page.drawImage(actualLogo,{x:pg.left,y:pg.h-132,width:243,height:243*86.8/373.08});
   const bx=310,bw=243,top=pg.h-68,bottom=pg.h-151;
   page.drawText('PROTOKOLL',{x:bx,y:pg.h-46,size:16,font:bold,color:navy});
   page.drawRectangle({x:bx,y:bottom,width:bw,height:top-bottom,borderWidth:.8,borderColor:lineColor});
